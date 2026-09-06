@@ -1,5 +1,7 @@
 # Trading Journal
 
+**Online:** https://lorenzomarellitrade-glitch.github.io/trading-journal/
+
 Journal personale per trading XAUUSD con strategia SMC/ICT su due account prop.
 
 A differenza di Tradezella o TraderBuddy, questo journal non traccia solo l'esito
@@ -82,14 +84,25 @@ Il progetto usa `base: './'` in `vite.config.ts` e `HashRouter` nel router: gli
 URL hanno la forma `/#/statistiche`, così un refresh non produce un 404 e non
 serve conoscere il nome del repository in fase di build.
 
+`gh-pages` pubblica il contenuto di `dist/` sul branch omonimo, da cui GitHub
+Pages serve il sito. La configurazione è già fatta: **Settings → Pages → Source:
+Deploy from a branch → `gh-pages` / `(root)`**.
+
+### Ciclo di aggiornamento
+
+Dopo aver modificato il codice:
+
 ```bash
-git remote add origin https://github.com/<utente>/<repo>.git
-npm run deploy
+npm test          # i test devono passare
+npm run deploy    # compila e ripubblica il sito
+git add -A
+git commit -m "descrizione della modifica"
+git push
 ```
 
-`gh-pages` pubblica il contenuto di `dist/` sul branch `gh-pages`. Poi, nelle
-impostazioni del repository su GitHub: **Settings → Pages → Source: Deploy from
-a branch → `gh-pages` / `(root)`**.
+`npm run deploy` aggiorna **solo il sito**; il `git push` aggiorna il codice
+sorgente sul repository. Sono due cose distinte: si può fare l'una senza
+l'altra, ma conviene tenerle allineate.
 
 > Le variabili `VITE_*` vengono inlinate nel bundle al momento della build.
 > Il sito pubblicato conterrà quindi l'URL del progetto e la chiave `anon`:
