@@ -17,6 +17,25 @@ function contribuisce(esito: Esito | null, exit: number | null): boolean {
   return esito !== 'annullato' && exit != null
 }
 
+/**
+ * Denominatore di tutte le percentuali: la somma dei saldi dei soli account
+ * selezionati che hanno almeno un'execution nei trade considerati.
+ *
+ * Con "Tutti" selezionato ci sono anche i conti di fasi precedenti, che in un
+ * mese recente non operano più: contarli dimezzerebbe le percentuali. Usando
+ * sempre questa funzione, un singolo trade e il giorno che lo contiene danno
+ * la stessa percentuale.
+ */
+export function capitaleOperativo(trades: TradeCompleto[], account: Account[]): number {
+  const operativi = new Set<string>()
+  for (const t of trades) {
+    for (const e of t.executions ?? []) operativi.add(e.account_id)
+  }
+  return account
+    .filter((a) => operativi.has(a.id))
+    .reduce((s, a) => s + a.saldo_iniziale, 0)
+}
+
 export interface MetricheTrade {
   /** null se nessuna execution selezionata è chiusa */
   pnlUsd: number | null
@@ -52,11 +71,7 @@ export function metricheTrade(trade: TradeCompleto, account: Account[]): Metrich
   const executions = (trade.executions ?? []).filter((e) => perId.has(e.account_id))
   if (executions.length === 0) return VUOTE
 
-  // Denominatore di tutte le percentuali: il capitale complessivo selezionato,
-  // non solo quello degli account che hanno operato. Deve coincidere con la
-  // base usata da riepiloga(), altrimenti lo stesso trade mostrerebbe due
-  // percentuali diverse fra la casella del calendario e la riga della lista.
-  const base = account.reduce((s, a) => s + a.saldo_iniziale, 0)
+  const base = capitaleOperativo([trade], account)
 
   let sommaPnl = 0
   let chiuse = 0
@@ -145,9 +160,8 @@ export function riepiloga(trades: TradeCompleto[], account: Account[]): Riepilog
     return { ...RIEPILOGO_VUOTO, numeroTrade: trades.length }
   }
 
-  // Il denominatore delle percentuali è la somma dei capitali selezionati:
-  // due account da 100.000 fanno una base da 200.000.
-  const baseTotale = account.reduce((s, a) => s + a.saldo_iniziale, 0)
+  // Due account da 100.000 che operano nel periodo fanno una base da 200.000.
+  const baseTotale = capitaleOperativo(trades, account)
 
   let pnl = 0
   let chiusi = 0

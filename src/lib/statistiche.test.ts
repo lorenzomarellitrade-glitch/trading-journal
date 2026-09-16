@@ -415,12 +415,11 @@ describe('perMese', () => {
 })
 
 describe('analisiProcesso', () => {
-  it('produce i sette confronti previsti', () => {
+  it('produce i confronti previsti', () => {
     const c = analisiProcesso([], ENTRAMBI)
     expect(c.map((x) => x.titolo)).toEqual([
       'Conferme',
       'Finestra oraria',
-      'Fallimento + Rottura',
       'Stop loss',
       'Uscita',
       'Origine del setup',
@@ -433,16 +432,23 @@ describe('analisiProcesso', () => {
     expect(analisiProcesso([], ENTRAMBI)[0].titolo).toBe('Conferme')
   })
 
-  it('divide correttamente per finestra oraria', () => {
+  it('divide fra dentro e fuori la finestra 09:00-12:00', () => {
     const trades = [
-      trade('2026-09-01', 'long', [vincente('a')], { finestra: '09:00-10:30' }),
+      trade('2026-09-01', 'long', [vincente('a')], { finestra: '09:00-12:00' }),
       trade('2026-09-02', 'long', [perdente('a')], { finestra: 'fuori finestra' }),
+      trade('2026-09-03', 'long', [perdente('a')], { finestra: 'fuori finestra' }),
     ]
 
     const finestre = analisiProcesso(trades, [A]).find((c) => c.titolo === 'Finestra oraria')!
-    expect(finestre.gruppi[0].numeroTrade).toBe(1) // 09:00-10:30
-    expect(finestre.gruppi[1].numeroTrade).toBe(0) // 12:00-13:00
-    expect(finestre.gruppi[2].numeroTrade).toBe(1) // fuori finestra
+    expect(finestre.gruppi).toHaveLength(2)
+    expect(finestre.gruppi[0].numeroTrade).toBe(1) // 09:00-12:00
+    expect(finestre.gruppi[1].numeroTrade).toBe(2) // fuori finestra
+  })
+
+  it('non propone più il confronto primo/secondo Fallimento + Rottura', () => {
+    expect(analisiProcesso([], ENTRAMBI).map((c) => c.titolo)).not.toContain(
+      'Fallimento + Rottura',
+    )
   })
 
   it('separa SL spostato da SL non toccato', () => {

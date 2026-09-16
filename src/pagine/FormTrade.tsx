@@ -18,7 +18,6 @@ import {
   ESITI,
   FINESTRE,
   FLAG_COMPORTAMENTALI,
-  NUMERI_FR,
   STEP_CHECKLIST,
   type Account,
   type Esito,
@@ -371,20 +370,6 @@ export default function FormTrade() {
                 onChange={(v) => aggiornaCampo(s.campo, v)}
               />
             ))}
-          </div>
-
-          <div className="mt-3">
-            <Campo
-              etichetta="Fallimento + Rottura preso"
-              suggerimento="Era il primo segnale della sequenza o il secondo?"
-            >
-              <GruppoOpzioni
-                opzioni={NUMERI_FR}
-                valore={trade.numero_fr ?? null}
-                etichette={{ primo: 'Primo', secondo: 'Secondo' }}
-                onChange={(v) => aggiorna({ numero_fr: v })}
-              />
-            </Campo>
           </div>
         </Sezione>
       </div>

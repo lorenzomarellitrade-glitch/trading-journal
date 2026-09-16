@@ -14,6 +14,7 @@ const ListaTrade = lazy(() => import('./pagine/ListaTrade'))
 const Statistiche = lazy(() => import('./pagine/Statistiche'))
 const ImpostazioniPagina = lazy(() => import('./pagine/Impostazioni'))
 const FormTrade = lazy(() => import('./pagine/FormTrade'))
+const ResocontoTrade = lazy(() => import('./pagine/ResocontoTrade'))
 
 function Attesa() {
   return <p className="text-sm text-testo-soft">Caricamento…</p>
@@ -45,9 +46,11 @@ function AppAutenticata() {
           <Routes>
             <Route path="/calendario" element={<Calendario />} />
             <Route path="/trade" element={<ListaTrade />} />
-            {/* La rotta statica va prima di quella con parametro */}
+            {/* Cliccando un trade, da lista o calendario, si apre il resoconto;
+                la modifica è un passo esplicito dal pulsante "Modifica". */}
             <Route path="/trade/nuovo" element={<FormTrade />} />
-            <Route path="/trade/:id" element={<FormTrade />} />
+            <Route path="/trade/:id/modifica" element={<FormTrade />} />
+            <Route path="/trade/:id" element={<ResocontoTrade />} />
             <Route path="/statistiche" element={<Statistiche />} />
             <Route path="/impostazioni" element={<ImpostazioniPagina />} />
             <Route path="*" element={<Navigate to="/calendario" replace />} />

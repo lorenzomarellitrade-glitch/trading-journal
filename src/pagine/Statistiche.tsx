@@ -105,7 +105,22 @@ export default function Statistiche() {
   )
 
   const generale = useMemo(() => riepiloga(filtrati, selezionati), [filtrati, selezionati])
-  const equity = useMemo(() => curvaEquity(filtrati, selezionati), [filtrati, selezionati])
+  /**
+   * Una linea dell'equity solo per i conti che hanno trade nel periodo: con
+   * "Tutti" i conti di fase chiusa resterebbero piatti per mesi, a occupare
+   * spazio e legenda senza dire niente.
+   */
+  const contiNelGrafico = useMemo(
+    () =>
+      selezionati.filter((a) =>
+        filtrati.some((t) => (t.executions ?? []).some((e) => e.account_id === a.id)),
+      ),
+    [filtrati, selezionati],
+  )
+  const equity = useMemo(
+    () => curvaEquity(filtrati, contiNelGrafico),
+    [filtrati, contiNelGrafico],
+  )
   const dd = useMemo(() => drawdownMassimo(filtrati, selezionati), [filtrati, selezionati])
   const istogramma = useMemo(() => distribuzioneR(filtrati, selezionati), [filtrati, selezionati])
   const confronti = useMemo(
@@ -263,7 +278,7 @@ export default function Statistiche() {
 
       {/* --- Grafici ------------------------------------------------------- */}
       <Sezione titolo="Equity curve">
-        <GraficoEquity punti={equity} account={selezionati} />
+        <GraficoEquity punti={equity} account={contiNelGrafico} />
       </Sezione>
 
       <Sezione titolo="Distribuzione degli R realizzati">

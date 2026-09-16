@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { creaFetchConRitentativo } from './ritentativo'
 import type { Database } from './tipi'
 
 const url = import.meta.env.VITE_SUPABASE_URL
@@ -14,6 +15,10 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient<Database>(url, anonKey, {
+  // Tutte le richieste, di lettura e di scrittura, passano dal ritentativo:
+  // vedi ritentativo.ts per il perché. fetch è avvolta in una funzione perché
+  // chiamarla staccata da window genera "Illegal invocation" in alcuni browser.
+  global: { fetch: creaFetchConRitentativo((...argomenti) => fetch(...argomenti)) },
   auth: {
     persistSession: true,
     autoRefreshToken: true,

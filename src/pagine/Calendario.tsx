@@ -149,7 +149,9 @@ export default function Calendario() {
     () =>
       consumoRischio(
         trades,
-        selezionati,
+        // I limiti valgono solo per i conti su cui si opera oggi: un conto di
+        // fase chiusa non può più sforare nulla.
+        selezionati.filter((a) => a.attivo),
         oggi,
         limiti.limite_giornaliero_percent,
         limiti.limite_settimanale_percent,

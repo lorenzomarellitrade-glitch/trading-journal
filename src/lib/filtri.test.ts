@@ -8,11 +8,11 @@ function con(patch: Partial<Filtri>): Filtri {
 
 const TRADES = [
   trade('2026-09-01', 'long', [vincente('a'), vincente('b')], {
-    finestra: '09:00-10:30',
+    finestra: '09:00-12:00',
     ...PROCESSO_COMPLETO,
   }),
   trade('2026-09-05', 'short', [perdente('a'), perdente('b')], {
-    finestra: '12:00-13:00',
+    finestra: 'fuori finestra',
     step1_analisi_multitf: true,
   }),
   trade('2026-09-10', 'long', [exe('b', { entry: 2000, stop_loss: 1995, exit: 2010, lotti: 1, esito: 'win' })], {
@@ -39,8 +39,8 @@ describe('filtraTrades', () => {
   })
 
   it('filtra per finestra oraria', () => {
-    expect(filtraTrades(TRADES, ENTRAMBI, con({ finestra: '09:00-10:30' }))).toHaveLength(1)
-    expect(filtraTrades(TRADES, ENTRAMBI, con({ finestra: 'fuori finestra' }))).toHaveLength(1)
+    expect(filtraTrades(TRADES, ENTRAMBI, con({ finestra: '09:00-12:00' }))).toHaveLength(1)
+    expect(filtraTrades(TRADES, ENTRAMBI, con({ finestra: 'fuori finestra' }))).toHaveLength(2)
   })
 
   it('filtra per esito', () => {
@@ -62,7 +62,7 @@ describe('filtraTrades', () => {
   })
 
   it('combina più filtri', () => {
-    const r = filtraTrades(TRADES, ENTRAMBI, con({ esito: 'win', finestra: '09:00-10:30' }))
+    const r = filtraTrades(TRADES, ENTRAMBI, con({ esito: 'win', finestra: '09:00-12:00' }))
     expect(r).toHaveLength(1)
   })
 })

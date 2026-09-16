@@ -1,4 +1,4 @@
-import { metricheTrade, riepiloga, type Riepilogo } from './aggregazioni'
+import { capitaleOperativo, metricheTrade, riepiloga, type Riepilogo } from './aggregazioni'
 import { CONFERME_TOTALI, contaConferme } from './calcoli'
 import { indiceGiornoSettimana, NOMI_GIORNI_ESTESI, NOMI_MESI } from './date'
 import type { Account, Esito, TradeCompleto } from './tipi'
@@ -82,7 +82,7 @@ export interface Drawdown {
  * singola. È la misura che conta per i limiti delle prop firm.
  */
 export function drawdownMassimo(trades: TradeCompleto[], account: Account[]): Drawdown {
-  const base = account.reduce((s, a) => s + a.saldo_iniziale, 0)
+  const base = capitaleOperativo(trades, account)
 
   let cumulato = 0
   let picco = 0
@@ -441,7 +441,7 @@ export function perTradeGiornalieri(trades: TradeCompleto[], account: Account[])
 }
 
 /**
- * I sette confronti di processo.
+ * I confronti di processo.
  * L'ordine non è casuale: parte dalla checklist, che è la domanda più
  * importante, e scende verso quelle di contorno.
  */
@@ -458,15 +458,9 @@ export function analisiProcesso(trades: TradeCompleto[], account: Account[]): Co
       { etichetta: '4 o meno', filtro: (t) => contaConferme(t) < CONFERME_TOTALI },
     ]),
 
-    c('Finestra oraria', 'Le finestre che ho scelto sono le migliori?', [
-      { etichetta: '09:00-10:30', filtro: (t) => t.finestra === '09:00-10:30' },
-      { etichetta: '12:00-13:00', filtro: (t) => t.finestra === '12:00-13:00' },
+    c('Finestra oraria', 'Operare dentro la finestra 09:00-12:00 paga davvero?', [
+      { etichetta: '09:00-12:00', filtro: (t) => t.finestra === '09:00-12:00' },
       { etichetta: 'Fuori finestra', filtro: (t) => t.finestra === 'fuori finestra' },
-    ]),
-
-    c('Fallimento + Rottura', 'Conviene prendere il primo segnale o aspettare il secondo?', [
-      { etichetta: 'Primo', filtro: (t) => t.numero_fr === 'primo' },
-      { etichetta: 'Secondo', filtro: (t) => t.numero_fr === 'secondo' },
     ]),
 
     c('Stop loss', 'Spostare lo stop mi salva o mi costa?', [

@@ -7,7 +7,7 @@ import {
   raggruppaPerGiorno,
   riepiloga,
 } from './aggregazioni'
-import { A, ENTRAMBI, exe, perdente, trade, vincente } from './fixture'
+import { A, acc, ENTRAMBI, exe, perdente, trade, vincente } from './fixture'
 
 // --- metricheTrade ----------------------------------------------------------
 
@@ -35,10 +35,20 @@ describe('metricheTrade', () => {
     const m = metricheTrade(t, ENTRAMBI)
 
     expect(m.pnlUsd).toBe(500)
-    // Con entrambi gli account selezionati la base è 200.000 anche se ha
-    // operato uno solo: è la percentuale sul capitale complessivo schierato.
-    expect(m.pnlPercent).toBe(0.25)
+    // La base è solo il conto che ha operato: con "Tutti" selezionato i conti
+    // fermi (ad esempio di una fase chiusa) non devono dimezzare la percentuale.
+    expect(m.pnlPercent).toBe(0.5)
     expect(m.rMedio).toBe(2)
+  })
+
+  it('non fa diluire le percentuali ai conti che non operano', () => {
+    // Quattro conti selezionati, ma il trade è solo sui due di fase 2.
+    const fase2 = [acc('c'), acc('d')]
+    const tutti = [...ENTRAMBI, ...fase2]
+    const t = trade('2026-09-15', 'long', [vincente('c'), vincente('d')])
+
+    expect(metricheTrade(t, tutti).pnlPercent).toBe(0.5) // 1000 su 200.000, non su 400.000
+    expect(riepiloga([t], tutti).pnlPercent).toBe(0.5)
   })
 
   it('usa la stessa base percentuale di riepiloga()', () => {

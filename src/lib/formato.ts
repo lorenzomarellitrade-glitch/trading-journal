@@ -53,6 +53,12 @@ export function formattaR(n: number | null | undefined): string {
   return `${testo}R`
 }
 
+/** Prezzo di XAUUSD, senza zeri finali superflui. Es. 2.345,67 */
+export function formattaPrezzo(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return VUOTO
+  return n.toLocaleString(LOCALE, { maximumFractionDigits: 3 })
+}
+
 /** Rapporto rischio/rendimento pianificato. Es. 1:2,00 */
 export function formattaRR(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return VUOTO

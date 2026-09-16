@@ -3,7 +3,7 @@ import { tradesInCsv } from './csv'
 import { A, ENTRAMBI, trade, vincente } from './fixture'
 
 const T = trade('2026-09-01', 'long', [vincente('a'), vincente('b')], {
-  finestra: '09:00-10:30',
+  finestra: '09:00-12:00',
   emozione: 'calmo',
   sl_spostato: true,
 })

@@ -7,7 +7,10 @@
 
 export type Direzione = 'long' | 'short'
 
-export type Finestra = '09:00-10:30' | '12:00-13:00' | 'fuori finestra'
+// Dal 16/09/2026 la finestra operativa è una sola. I valori '09:00-10:30' e
+// '12:00-13:00' esistono ancora nell'enum del database (Postgres non permette
+// di rimuoverli) ma i trade sono stati riclassificati e l'app non li usa più.
+export type Finestra = '09:00-12:00' | 'fuori finestra'
 
 export type Bias = 'rialzista' | 'ribassista' | 'laterale'
 
@@ -16,9 +19,8 @@ export type NumeroFR = 'primo' | 'secondo'
 export type Esito = 'win' | 'loss' | 'breakeven' | 'annullato'
 
 export const DIREZIONI: Direzione[] = ['long', 'short']
-export const FINESTRE: Finestra[] = ['09:00-10:30', '12:00-13:00', 'fuori finestra']
+export const FINESTRE: Finestra[] = ['09:00-12:00', 'fuori finestra']
 export const BIAS: Bias[] = ['rialzista', 'ribassista', 'laterale']
-export const NUMERI_FR: NumeroFR[] = ['primo', 'secondo']
 export const ESITI: Esito[] = ['win', 'loss', 'breakeven', 'annullato']
 
 /** I 5 step della checklist, in ordine, con l'etichetta mostrata nel form. */

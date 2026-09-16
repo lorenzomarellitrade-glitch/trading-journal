@@ -13,8 +13,10 @@ begin
     create type direzione_trade as enum ('long', 'short');
   end if;
 
+  -- Dal 2026-09-16 la finestra operativa è una sola. Un database creato prima
+  -- di quella data va aggiornato con supabase/migrazioni/2026-09-16_finestra_unica.sql
   if not exists (select 1 from pg_type where typname = 'finestra_oraria') then
-    create type finestra_oraria as enum ('09:00-10:30', '12:00-13:00', 'fuori finestra');
+    create type finestra_oraria as enum ('09:00-12:00', 'fuori finestra');
   end if;
 
   if not exists (select 1 from pg_type where typname = 'bias_tf') then
