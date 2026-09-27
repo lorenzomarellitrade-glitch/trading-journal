@@ -225,6 +225,56 @@ export function perditaPercent(
 }
 
 /**
+ * Perdita del periodo sull'account messo peggio, in percentuale positiva.
+ *
+ * Vale il peggiore e non la media: è il singolo conto che sfora a far scattare
+ * il breach della prop firm, e una media potrebbe nasconderlo dietro l'altro
+ * conto in utile.
+ */
+export function perditaPeggiorePercent(
+  trades: TradeCompleto[],
+  account: Account[],
+  da: string,
+  a: string,
+): number {
+  if (account.length === 0) return 0
+  return Math.max(...account.map((c) => perditaPercent(trades, c, da, a)))
+}
+
+export interface GiornateOperative {
+  /** Giornate chiuse in utile */
+  vinte: number
+  /** Giornate chiuse in perdita */
+  perse: number
+  /** Giornate chiuse esattamente in pari */
+  pari: number
+}
+
+/**
+ * Quante giornate si sono chiuse in utile e quante in perdita.
+ *
+ * Conta le giornate, non i trade: tre perdite in un giorno e una vincita più
+ * grande fanno una giornata vinta. È la lettura che conta quando il limite di
+ * perdita è giornaliero.
+ */
+export function giornateVinteEPerse(
+  trades: TradeCompleto[],
+  account: Account[],
+): GiornateOperative {
+  const risultato: GiornateOperative = { vinte: 0, perse: 0, pari: 0 }
+
+  for (const [, delGiorno] of raggruppaPerGiorno(trades)) {
+    const r = riepiloga(delGiorno, account)
+    if (r.numeroChiusi === 0) continue
+    if (r.pnlUsd > 0) risultato.vinte++
+    else if (r.pnlUsd < 0) risultato.perse++
+    else risultato.pari++
+  }
+
+  return risultato
+}
+
+/**
  * Consumo dei limiti giornaliero e settimanale.
  *
  * Con più account selezionati vale il **peggiore**, non la media: è il singolo
@@ -250,11 +300,8 @@ export function consumoRischio(
 ): ConsumoRischio {
   const lunedi = inizioSettimana(oggi)
 
-  const perditeGiorno = account.map((a) => perditaPercent(trades, a, oggi, oggi))
-  const perditeSettimana = account.map((a) => perditaPercent(trades, a, lunedi, oggi))
-
-  const perditaOggiPercent = perditeGiorno.length > 0 ? Math.max(...perditeGiorno) : 0
-  const perditaSettimanaPercent = perditeSettimana.length > 0 ? Math.max(...perditeSettimana) : 0
+  const perditaOggiPercent = perditaPeggiorePercent(trades, account, oggi, oggi)
+  const perditaSettimanaPercent = perditaPeggiorePercent(trades, account, lunedi, oggi)
 
   return {
     perditaOggiPercent,

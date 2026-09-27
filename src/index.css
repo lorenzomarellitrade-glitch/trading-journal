@@ -1,19 +1,27 @@
 @import 'tailwindcss';
 
 /* ---------------------------------------------------------------------------
-   Palette terra/beige, deliberatamente a bassa carica emotiva.
+   Palette terra su fondo scuro, deliberatamente a bassa carica emotiva.
    Definita come token Tailwind v4: ogni token genera le utility corrispondenti
    (bg-sfondo, text-testo, border-bordo, ...).
+
+   I toni sono gli stessi di prima — oliva per gli utili, mattone per le
+   perdite, terra per l'interattivo — schiariti quanto basta a restare
+   leggibili sul nero. Nessun verde o rosso acceso: il colore serve a
+   distinguere, non a far esultare o disperare.
+
+   Il fondo non è nero puro ma un bruno molto scuro: il nero assoluto contro
+   testo chiaro crea un contrasto che stanca nelle letture lunghe.
    --------------------------------------------------------------------------- */
 @theme {
-  --color-sfondo: #f5f0e8;
-  --color-superficie: #faf7f2;
-  --color-testo: #3d3833;
-  --color-testo-soft: #7a7268;
-  --color-positivo: #7d8471;
-  --color-negativo: #a8735a;
-  --color-accento: #b08968;
-  --color-bordo: #e0d8cc;
+  --color-sfondo: #17150f;
+  --color-superficie: #211e18;
+  --color-testo: #ece5d9;
+  --color-testo-soft: #9b9184;
+  --color-positivo: #93a181;
+  --color-negativo: #c78a6b;
+  --color-accento: #c79c74;
+  --color-bordo: #3a342b;
 
   --radius-card: 0.5rem;
 }

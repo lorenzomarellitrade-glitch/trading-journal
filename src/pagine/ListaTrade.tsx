@@ -20,6 +20,7 @@ import {
   oggiIso,
   VUOTO,
 } from '../lib/formato'
+import { immagineSnapshot, linkAnteprima } from '../lib/tradingview'
 import { ESITI, FINESTRE, FLAG_COMPORTAMENTALI, type Account, type TradeCompleto } from '../lib/tipi'
 import { Campo, GruppoOpzioni, Input } from '../componenti/campi'
 import SelettoreAccount, {
@@ -37,6 +38,8 @@ const COLONNE: { chiave: Colonna; etichetta: string; allineaDestra?: boolean }[]
   { chiave: 'pnl', etichetta: 'P&L', allineaDestra: true },
   { chiave: 'pnlPercent', etichetta: 'P&L %', allineaDestra: true },
 ]
+
+type Vista = 'griglia' | 'tabella'
 
 function classeSegno(n: number | null): string {
   if (n == null || n === 0) return 'text-testo'
@@ -63,6 +66,58 @@ function Flag({ trade }: { trade: TradeCompleto }) {
   )
 }
 
+/** Scheda di un trade nella griglia: il grafico fa da copertina. */
+function SchedaTrade({ trade, account }: { trade: TradeCompleto; account: Account[] }) {
+  const m = metricheTrade(trade, account)
+  const conferme = contaConferme(trade)
+  const anteprima = immagineSnapshot(linkAnteprima(trade))
+  const [immagineRotta, setImmagineRotta] = useState(false)
+
+  return (
+    <Link
+      to={`/trade/${trade.id}`}
+      className="group overflow-hidden rounded-card border border-bordo bg-superficie transition-colors hover:border-accento"
+    >
+      <div className="flex aspect-video items-center justify-center bg-sfondo">
+        {anteprima && !immagineRotta ? (
+          <img
+            src={anteprima}
+            alt=""
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setImmagineRotta(true)}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="text-xs text-testo-soft">Nessun grafico</span>
+        )}
+      </div>
+
+      <div className="space-y-1 p-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs uppercase tracking-wide text-testo-soft">
+            {trade.direzione}
+            {m.esito && <span className="ml-2 text-testo">{m.esito}</span>}
+          </span>
+          <span className={`num text-sm ${classeSegno(m.pnlUsd)}`}>
+            {m.pnlUsd == null ? VUOTO : formattaUsd(m.pnlUsd, true)}
+          </span>
+        </div>
+
+        <div className="flex items-baseline justify-between gap-2 text-[11px] text-testo-soft">
+          <span className="num">{formattaData(trade.data)}</span>
+          <span className="num flex items-center gap-2">
+            <span className={conferme === CONFERME_TOTALI ? 'text-positivo' : ''}>
+              {conferme}/{CONFERME_TOTALI}
+            </span>
+            <span className={classeSegno(m.rMedio)}>{formattaR(m.rMedio)}</span>
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function ListaTrade() {
   const [trades, setTrades] = useState<TradeCompleto[]>([])
   const [account, setAccount] = useState<Account[]>([])
@@ -70,6 +125,7 @@ export default function ListaTrade() {
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_VUOTI)
   const [colonna, setColonna] = useState<Colonna>('data')
   const [verso, setVerso] = useState<Verso>('desc')
+  const [vista, setVista] = useState<Vista>('griglia')
 
   const [caricamento, setCaricamento] = useState(true)
   const [errore, setErrore] = useState<string | null>(null)
@@ -103,10 +159,7 @@ export default function ListaTrade() {
     [trades, selezionati, filtri, colonna, verso],
   )
 
-  const riepilogoFiltrato = useMemo(
-    () => riepiloga(visibili, selezionati),
-    [visibili, selezionati],
-  )
+  const riepilogoFiltrato = useMemo(() => riepiloga(visibili, selezionati), [visibili, selezionati])
 
   /** Riclicca la stessa colonna per invertire il verso. */
   function ordina(c: Colonna) {
@@ -126,7 +179,8 @@ export default function ListaTrade() {
     filtri.a != null ||
     filtri.esito != null ||
     filtri.finestra != null ||
-    filtri.soloProcessoCompleto
+    filtri.soloProcessoCompleto ||
+    (filtri.testo != null && filtri.testo.trim() !== '')
 
   if (caricamento) return <p className="text-sm text-testo-soft">Caricamento…</p>
 
@@ -146,6 +200,23 @@ export default function ListaTrade() {
           <SelettoreAccount account={account} selezione={selezione} onChange={setSelezione} />
 
           <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {(['griglia', 'tabella'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setVista(v)}
+                  aria-pressed={vista === v}
+                  className={`rounded-md border px-2.5 py-1.5 text-xs capitalize transition-colors ${
+                    vista === v
+                      ? 'border-accento bg-accento/15 text-accento'
+                      : 'border-bordo text-testo-soft hover:text-testo'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+
             {filtriAttivi && (
               <button
                 onClick={() => setFiltri(FILTRI_VUOTI)}
@@ -162,6 +233,15 @@ export default function ListaTrade() {
               Esporta CSV
             </button>
           </div>
+        </div>
+
+        <div className="mt-3">
+          <Input
+            type="search"
+            value={filtri.testo ?? ''}
+            onChange={(e) => setFiltri({ ...filtri, testo: e.target.value || null })}
+            placeholder="Cerca nelle note, nell'emozione, nella direzione o nella data…"
+          />
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -200,7 +280,7 @@ export default function ListaTrade() {
             type="checkbox"
             checked={filtri.soloProcessoCompleto}
             onChange={(e) => setFiltri({ ...filtri, soloProcessoCompleto: e.target.checked })}
-            className="h-4 w-4 accent-[#B08968]"
+            className="h-4 w-4 accent-accento"
           />
           Solo trade con {CONFERME_TOTALI}/{CONFERME_TOTALI} conferme
         </label>
@@ -209,13 +289,11 @@ export default function ListaTrade() {
       {/* --- Riepilogo di ciò che è filtrato -------------------------------- */}
       <div className="flex flex-wrap gap-x-8 gap-y-2 rounded-card border border-bordo bg-superficie px-4 py-3 text-sm">
         <span className="text-testo-soft">
-          {visibili.length} {visibili.length === 1 ? 'trade' : 'trade'}
+          {visibili.length} trade
           {filtriAttivi && ` su ${trades.length}`}
         </span>
         <span className={`num ${classeSegno(riepilogoFiltrato.pnlUsd)}`}>
-          {riepilogoFiltrato.numeroChiusi > 0
-            ? formattaUsd(riepilogoFiltrato.pnlUsd, true)
-            : VUOTO}
+          {riepilogoFiltrato.numeroChiusi > 0 ? formattaUsd(riepilogoFiltrato.pnlUsd, true) : VUOTO}
         </span>
         <span className="num text-testo-soft">
           Win rate{' '}
@@ -223,92 +301,99 @@ export default function ListaTrade() {
             ? VUOTO
             : formattaPercent(riepilogoFiltrato.winRate, 0)}
         </span>
-        <span className="num text-testo-soft">
-          R medio {formattaR(riepilogoFiltrato.rMedio)}
-        </span>
+        <span className="num text-testo-soft">R medio {formattaR(riepilogoFiltrato.rMedio)}</span>
       </div>
 
-      {/* --- Tabella -------------------------------------------------------- */}
-      <div className="overflow-x-auto rounded-card border border-bordo bg-superficie">
-        <table className="w-full min-w-3xl text-sm">
-          <thead>
-            <tr className="border-b border-bordo">
-              {COLONNE.map((c) => (
+      {/* --- Trade ---------------------------------------------------------- */}
+      {visibili.length === 0 ? (
+        <p className="rounded-card border border-bordo bg-superficie px-4 py-8 text-center text-sm text-testo-soft">
+          {trades.length === 0
+            ? 'Nessun trade registrato.'
+            : 'Nessun trade corrisponde ai filtri.'}
+        </p>
+      ) : vista === 'griglia' ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visibili.map((t) => (
+            <SchedaTrade key={t.id} trade={t} account={selezionati} />
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-bordo bg-superficie">
+          <table className="w-full min-w-3xl text-sm">
+            <thead>
+              <tr className="border-b border-bordo">
+                {COLONNE.map((c) => (
+                  <th
+                    key={c.chiave}
+                    scope="col"
+                    className={`px-3 py-2 font-normal ${c.allineaDestra ? 'text-right' : 'text-left'}`}
+                  >
+                    <button
+                      onClick={() => ordina(c.chiave)}
+                      className={`text-[11px] uppercase tracking-wide transition-colors hover:text-testo ${
+                        colonna === c.chiave ? 'text-accento' : 'text-testo-soft'
+                      }`}
+                    >
+                      {c.etichetta}
+                      {colonna === c.chiave && (verso === 'asc' ? ' ↑' : ' ↓')}
+                    </button>
+                  </th>
+                ))}
                 <th
-                  key={c.chiave}
                   scope="col"
-                  className={`px-3 py-2 font-normal ${c.allineaDestra ? 'text-right' : 'text-left'}`}
+                  className="px-3 py-2 text-left text-[11px] font-normal uppercase tracking-wide text-testo-soft"
                 >
-                  <button
-                    onClick={() => ordina(c.chiave)}
-                    className={`text-[11px] uppercase tracking-wide transition-colors hover:text-testo ${
-                      colonna === c.chiave ? 'text-accento' : 'text-testo-soft'
-                    }`}
-                  >
-                    {c.etichetta}
-                    {colonna === c.chiave && (verso === 'asc' ? ' ↑' : ' ↓')}
-                  </button>
+                  Flag
                 </th>
-              ))}
-              <th scope="col" className="px-3 py-2 text-left text-[11px] uppercase tracking-wide font-normal text-testo-soft">
-                Flag
-              </th>
-            </tr>
-          </thead>
+              </tr>
+            </thead>
 
-          <tbody>
-            {visibili.map((t) => {
-              const m = metricheTrade(t, selezionati)
-              const conferme = contaConferme(t)
+            <tbody>
+              {visibili.map((t) => {
+                const m = metricheTrade(t, selezionati)
+                const conferme = contaConferme(t)
 
-              return (
-                <tr
-                  key={t.id}
-                  className="border-b border-bordo/60 transition-colors last:border-0 hover:bg-sfondo"
-                >
-                  <td className="px-3 py-2">
-                    {/* Il link avvolge solo la prima cella ma copre la riga:
-                        una riga <tr> non può essere un elemento cliccabile valido. */}
-                    <Link to={`/trade/${t.id}`} className="num block hover:text-accento">
-                      {formattaData(t.data)}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-testo-soft">{t.direzione}</td>
-                  <td className="px-3 py-2 text-testo-soft">{t.finestra ?? VUOTO}</td>
-                  <td
-                    className={`num px-3 py-2 text-right ${
-                      conferme === CONFERME_TOTALI ? 'text-positivo' : 'text-testo-soft'
-                    }`}
+                return (
+                  <tr
+                    key={t.id}
+                    className="border-b border-bordo/60 transition-colors last:border-0 hover:bg-sfondo"
                   >
-                    {conferme}/{CONFERME_TOTALI}
-                  </td>
-                  <td className="px-3 py-2 text-testo-soft">{m.esito ?? VUOTO}</td>
-                  <td className={`num px-3 py-2 text-right ${classeSegno(m.rMedio)}`}>
-                    {formattaR(m.rMedio)}
-                  </td>
-                  <td className={`num px-3 py-2 text-right ${classeSegno(m.pnlUsd)}`}>
-                    {m.pnlUsd == null ? VUOTO : formattaUsd(m.pnlUsd, true)}
-                  </td>
-                  <td className={`num px-3 py-2 text-right ${classeSegno(m.pnlPercent)}`}>
-                    {formattaPercent(m.pnlPercent, 2, true)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Flag trade={t} />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-
-        {visibili.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-testo-soft">
-            {trades.length === 0
-              ? 'Nessun trade registrato.'
-              : 'Nessun trade corrisponde ai filtri.'}
-          </p>
-        )}
-      </div>
+                    <td className="px-3 py-2">
+                      {/* Il link avvolge solo la prima cella: una riga <tr> non
+                          può essere un elemento cliccabile valido. */}
+                      <Link to={`/trade/${t.id}`} className="num block hover:text-accento">
+                        {formattaData(t.data)}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-testo-soft">{t.direzione}</td>
+                    <td className="px-3 py-2 text-testo-soft">{t.finestra ?? VUOTO}</td>
+                    <td
+                      className={`num px-3 py-2 text-right ${
+                        conferme === CONFERME_TOTALI ? 'text-positivo' : 'text-testo-soft'
+                      }`}
+                    >
+                      {conferme}/{CONFERME_TOTALI}
+                    </td>
+                    <td className="px-3 py-2 text-testo-soft">{m.esito ?? VUOTO}</td>
+                    <td className={`num px-3 py-2 text-right ${classeSegno(m.rMedio)}`}>
+                      {formattaR(m.rMedio)}
+                    </td>
+                    <td className={`num px-3 py-2 text-right ${classeSegno(m.pnlUsd)}`}>
+                      {m.pnlUsd == null ? VUOTO : formattaUsd(m.pnlUsd, true)}
+                    </td>
+                    <td className={`num px-3 py-2 text-right ${classeSegno(m.pnlPercent)}`}>
+                      {formattaPercent(m.pnlPercent, 2, true)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Flag trade={t} />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

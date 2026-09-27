@@ -23,6 +23,21 @@ export const FINESTRE: Finestra[] = ['09:00-12:00', 'fuori finestra']
 export const BIAS: Bias[] = ['rialzista', 'ribassista', 'laterale']
 export const ESITI: Esito[] = ['win', 'loss', 'breakeven', 'annullato']
 
+/** I canali del journal emotivo, nell'ordine in cui compaiono. */
+export type Canale = 'tp' | 'stop' | 'be' | 'miss' | 'stato-mentale'
+
+export const CANALI: { canale: Canale; etichetta: string; descrizione: string }[] = [
+  { canale: 'tp', etichetta: 'TP', descrizione: 'Le operazioni andate a target' },
+  { canale: 'stop', etichetta: 'Stop', descrizione: 'Le operazioni chiuse in stop' },
+  { canale: 'be', etichetta: 'BE', descrizione: 'Le operazioni chiuse in pari' },
+  { canale: 'miss', etichetta: 'Miss', descrizione: 'I setup visti ma non presi' },
+  {
+    canale: 'stato-mentale',
+    etichetta: 'Stato mentale',
+    descrizione: 'Come stavi, cosa hai provato, cosa hai imparato',
+  },
+]
+
 /** I 5 step della checklist, in ordine, con l'etichetta mostrata nel form. */
 export const STEP_CHECKLIST = [
   { campo: 'step1_analisi_multitf', etichetta: 'Analisi multi-timeframe' },
@@ -69,6 +84,12 @@ export type Account = {
   saldo_iniziale: number
   valuta: string
   attivo: boolean
+  /** Target di profitto della prop, in % del saldo iniziale. null = nessun obiettivo. */
+  target_profitto_percent: number | null
+  /** Perdita massima in una singola giornata, in % del saldo iniziale. */
+  drawdown_giornaliero_percent: number | null
+  /** Perdita massima complessiva, in % del saldo iniziale. null = nessun limite. */
+  drawdown_massimo_percent: number | null
   created_at: string
   updated_at: string
 }
@@ -126,6 +147,17 @@ export type Execution = {
   lotti: number | null
   esito: Esito | null
 
+  created_at: string
+  updated_at: string
+}
+
+/** Un messaggio del journal emotivo. Il mese si ricava dalla data. */
+export type NotaJournal = {
+  id: string
+  user_id: string
+  data: string
+  canale: Canale
+  testo: string
   created_at: string
   updated_at: string
 }
@@ -195,6 +227,12 @@ export type Database = {
         Update: Partial<Impostazioni>
         Relationships: []
       }
+      note_journal: {
+        Row: NotaJournal
+        Insert: Insertabile<NotaJournal, 'canale' | 'testo'>
+        Update: Partial<NotaJournal>
+        Relationships: []
+      }
     }
     // Insiemi vuoti nella forma canonica: `{ [_ in never]: never }` non ha
     // index signature, quindi `keyof` è `never`. Con `Record<string, never>`
@@ -208,6 +246,7 @@ export type Database = {
       bias_tf: Bias
       numero_fr: NumeroFR
       esito_execution: Esito
+      canale_journal: Canale
     }
     CompositeTypes: { [_ in never]: never }
   }

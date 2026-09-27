@@ -273,6 +273,97 @@ export function perMese(trades: TradeCompleto[], account: Account[]): RigaPeriod
 }
 
 // ---------------------------------------------------------------------------
+// Punteggi sintetici
+// ---------------------------------------------------------------------------
+
+export interface Punteggio {
+  /** Da 0 a 100; null quando non ci sono dati per calcolarlo */
+  valore: number | null
+  /** Trade su cui è calcolato */
+  numeroTrade: number
+  campioneScarso: boolean
+}
+
+const PUNTEGGIO_VUOTO: Punteggio = { valore: null, numeroTrade: 0, campioneScarso: true }
+
+/**
+ * Peso di ciascuna componente dell'aderenza al processo.
+ * La checklist pesa quanto tutto il resto messo insieme: è il cuore del metodo,
+ * gli altri quattro sono comportamenti che lo accompagnano.
+ */
+const PESI_PROCESSO = {
+  conferme: 0.4,
+  finestra: 0.15,
+  stopFermo: 0.15,
+  uscitaAPiano: 0.15,
+  ideaPropria: 0.15,
+} as const
+
+/**
+ * Quanto hai seguito il tuo piano, da 0 a 100.
+ *
+ * Si calcola su **tutti** i trade, anche quelli ancora aperti: l'aderenza
+ * riguarda le decisioni prese all'entrata, non come sono finite. Una
+ * componente non compilata (tipicamente la finestra) viene esclusa e i pesi
+ * ridistribuiti, invece di contare come violazione.
+ *
+ * È il punteggio che misura te. L'altro misura il mercato.
+ */
+export function punteggioProcesso(trades: TradeCompleto[]): Punteggio {
+  if (trades.length === 0) return PUNTEGGIO_VUOTO
+
+  let somma = 0
+
+  for (const t of trades) {
+    const componenti: { peso: number; valore: number | null }[] = [
+      { peso: PESI_PROCESSO.conferme, valore: contaConferme(t) / CONFERME_TOTALI },
+      {
+        peso: PESI_PROCESSO.finestra,
+        valore: t.finestra == null ? null : t.finestra === 'fuori finestra' ? 0 : 1,
+      },
+      { peso: PESI_PROCESSO.stopFermo, valore: t.sl_spostato ? 0 : 1 },
+      { peso: PESI_PROCESSO.uscitaAPiano, valore: t.chiuso_manualmente ? 0 : 1 },
+      { peso: PESI_PROCESSO.ideaPropria, valore: t.idea_esterna ? 0 : 1 },
+    ]
+
+    const disponibili = componenti.filter((c) => c.valore != null)
+    const pesoTotale = disponibili.reduce((s, c) => s + c.peso, 0)
+    if (pesoTotale === 0) continue
+
+    somma += disponibili.reduce((s, c) => s + c.peso * c.valore!, 0) / pesoTotale
+  }
+
+  return {
+    valore: (somma / trades.length) * 100,
+    numeroTrade: trades.length,
+    campioneScarso: trades.length < SOGLIA_CAMPIONE,
+  }
+}
+
+/**
+ * Quanto ha reso il metodo, da 0 a 100, a partire dall'expectancy in R.
+ *
+ * La scala è deliberatamente semplice: 50 è il pareggio, 100 significa
+ * guadagnare in media 1R per trade, 0 significa perderne 1. Con pochi trade
+ * oscilla molto, ed è il motivo per cui accanto compare sempre il numero di
+ * operazioni su cui è calcolato.
+ */
+export function punteggioRisultati(trades: TradeCompleto[], account: Account[]): Punteggio {
+  const r = riepiloga(trades, account)
+  if (r.numeroChiusi === 0 || r.expectancyR == null) {
+    return { ...PUNTEGGIO_VUOTO, numeroTrade: 0 }
+  }
+
+  const grezzo = 50 + r.expectancyR * 50
+
+  return {
+    valore: Math.min(100, Math.max(0, grezzo)),
+    numeroTrade: r.numeroChiusi,
+    campioneScarso: r.numeroChiusi < SOGLIA_CAMPIONE,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Miglioramento nel tempo
 // ---------------------------------------------------------------------------
 

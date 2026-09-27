@@ -14,12 +14,25 @@ import {
   perGiornoSettimana,
   perMese,
   perTradeGiornalieri,
+  punteggioProcesso,
+  punteggioRisultati,
 } from '../lib/statistiche'
 import type { Account, TradeCompleto } from '../lib/tipi'
 import AnalisiProcesso from '../componenti/AnalisiProcesso'
 import { Campo, Input, Kpi } from '../componenti/campi'
 import { GraficoDisciplina, GraficoDistribuzioneR, GraficoEquity } from '../componenti/Grafici'
 import TabellaPeriodi from '../componenti/TabellaPeriodi'
+import Punteggio from '../componenti/Punteggio'
+
+/** Tracciati delle icone dei riquadri, nello stile a linea sottile. */
+const ICONE = {
+  soldi: 'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+  bersaglio: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  salita: 'M3 17l6-6 4 4 7-7M14 4h7v7',
+  discesa: 'M3 7l6 6 4-4 7 7M14 20h7v-7',
+  elenco: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  battito: 'M22 12h-4l-3 9L9 3l-3 9H2',
+} as const
 import SelettoreAccount, {
   accountSelezionati,
   type SelezioneAccount,
@@ -134,6 +147,11 @@ export default function Statistiche() {
   const giorni = useMemo(() => perGiornoSettimana(filtrati, selezionati), [filtrati, selezionati])
   const mesi = useMemo(() => perMese(filtrati, selezionati), [filtrati, selezionati])
   const disciplina = useMemo(() => disciplinaPerMese(filtrati), [filtrati])
+  const processo = useMemo(() => punteggioProcesso(filtrati), [filtrati])
+  const risultati = useMemo(
+    () => punteggioRisultati(filtrati, selezionati),
+    [filtrati, selezionati],
+  )
   const costoUscita = useMemo(
     () => costoChiusuraManuale(filtrati, selezionati),
     [filtrati, selezionati],
@@ -195,10 +213,25 @@ export default function Statistiche() {
         </div>
       </div>
 
+      {/* --- I due punteggi ------------------------------------------------ */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Punteggio
+          titolo="Processo"
+          spiegazione="Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua."
+          punteggio={processo}
+        />
+        <Punteggio
+          titolo="Risultati"
+          spiegazione="Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade."
+          punteggio={risultati}
+        />
+      </div>
+
       {/* --- Metriche generali -------------------------------------------- */}
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           etichetta="P&L totale"
+          icona={ICONE.soldi}
           valore={generale.numeroChiusi > 0 ? formattaUsd(generale.pnlUsd, true) : VUOTO}
           classe={classeSegno(generale.numeroChiusi > 0 ? generale.pnlUsd : null)}
           nota={
@@ -207,26 +240,34 @@ export default function Statistiche() {
         />
         <Kpi
           etichetta="Win rate"
+          icona={ICONE.bersaglio}
           valore={generale.winRate == null ? VUOTO : formattaPercent(generale.winRate, 0)}
           nota={`${generale.vittorie} su ${generale.numeroChiusi}`}
         />
         <Kpi
           etichetta="Expectancy"
+          icona={ICONE.salita}
           valore={formattaR(generale.expectancyR)}
           nota="per trade"
         />
         <Kpi
           etichetta="Drawdown max"
+          icona={ICONE.discesa}
           valore={dd.usd > 0 ? formattaUsd(-dd.usd) : formattaUsd(0)}
           classe={dd.usd > 0 ? 'text-negativo' : 'text-testo'}
           nota={dd.percent == null ? undefined : formattaPercent(dd.percent)}
         />
-        <Kpi etichetta="Trade" valore={String(generale.numeroTrade)} nota={
-          generale.numeroTrade === generale.numeroChiusi
-            ? undefined
-            : `${generale.numeroChiusi} conclusi`
-        } />
-        <Kpi etichetta="R medio" valore={formattaR(generale.rMedio)} />
+        <Kpi
+          etichetta="Trade"
+          icona={ICONE.elenco}
+          valore={String(generale.numeroTrade)}
+          nota={
+            generale.numeroTrade === generale.numeroChiusi
+              ? undefined
+              : `${generale.numeroChiusi} conclusi`
+          }
+        />
+        <Kpi etichetta="R medio" icona={ICONE.battito} valore={formattaR(generale.rMedio)} />
       </dl>
 
       {/* --- Disciplina nel tempo ------------------------------------------ */}

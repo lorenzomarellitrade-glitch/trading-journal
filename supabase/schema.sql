@@ -30,6 +30,10 @@ begin
   if not exists (select 1 from pg_type where typname = 'esito_execution') then
     create type esito_execution as enum ('win', 'loss', 'breakeven', 'annullato');
   end if;
+
+  if not exists (select 1 from pg_type where typname = 'canale_journal') then
+    create type canale_journal as enum ('tp', 'stop', 'be', 'miss', 'stato-mentale');
+  end if;
 end
 $$;
 
@@ -56,6 +60,14 @@ create table if not exists public.accounts (
   saldo_iniziale numeric(14, 2) not null check (saldo_iniziale > 0),
   valuta         text not null default 'USD',
   attivo         boolean not null default true,
+
+  -- Regole della prop, in percentuale del saldo iniziale. Restano NULL sui
+  -- conti senza obiettivi da rispettare, ad esempio un conto reale personale.
+  -- Il drawdown è statico: soglia fissa sotto il saldo iniziale.
+  target_profitto_percent      numeric(5, 2) check (target_profitto_percent is null or target_profitto_percent > 0),
+  drawdown_giornaliero_percent numeric(5, 2) check (drawdown_giornaliero_percent is null or drawdown_giornaliero_percent > 0),
+  drawdown_massimo_percent     numeric(5, 2) check (drawdown_massimo_percent is null or drawdown_massimo_percent > 0),
+
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
@@ -176,6 +188,29 @@ create trigger impostazioni_updated_at
   for each row execute function public.tocca_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- 6-bis. Tabella note_journal — il journal emotivo
+--    Messaggi liberi divisi per canale. Il mese non è un campo: si ricava
+--    dalla data, così non ci sono contenitori mensili da creare a mano.
+-- ---------------------------------------------------------------------------
+create table if not exists public.note_journal (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  data       date not null default current_date,
+  canale     canale_journal not null,
+  testo      text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists note_journal_user_canale_data_idx
+  on public.note_journal (user_id, canale, data, created_at);
+
+drop trigger if exists note_journal_updated_at on public.note_journal;
+create trigger note_journal_updated_at
+  before update on public.note_journal
+  for each row execute function public.tocca_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- 7. Row Level Security
 --    Ogni riga è visibile e modificabile solo dal proprietario (auth.uid()).
 --    Nessuna policy per il ruolo anon: senza login non si legge nulla.
@@ -184,6 +219,7 @@ alter table public.accounts     enable row level security;
 alter table public.trades       enable row level security;
 alter table public.executions   enable row level security;
 alter table public.impostazioni enable row level security;
+alter table public.note_journal enable row level security;
 
 -- accounts
 drop policy if exists "accounts select proprio"  on public.accounts;
@@ -241,6 +277,21 @@ create policy "impostazioni insert proprio" on public.impostazioni
   for insert to authenticated with check (auth.uid() = user_id);
 create policy "impostazioni update proprio" on public.impostazioni
   for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- note_journal
+drop policy if exists "note select proprio" on public.note_journal;
+drop policy if exists "note insert proprio" on public.note_journal;
+drop policy if exists "note update proprio" on public.note_journal;
+drop policy if exists "note delete proprio" on public.note_journal;
+
+create policy "note select proprio" on public.note_journal
+  for select to authenticated using (auth.uid() = user_id);
+create policy "note insert proprio" on public.note_journal
+  for insert to authenticated with check (auth.uid() = user_id);
+create policy "note update proprio" on public.note_journal
+  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "note delete proprio" on public.note_journal
+  for delete to authenticated using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
 -- 8. Dati iniziali (opzionale)

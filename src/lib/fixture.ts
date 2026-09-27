@@ -14,6 +14,9 @@ export function acc(id: string, saldo = 100000): Account {
     saldo_iniziale: saldo,
     valuta: 'USD',
     attivo: true,
+    target_profitto_percent: null,
+    drawdown_giornaliero_percent: null,
+    drawdown_massimo_percent: null,
     created_at: '',
     updated_at: '',
   }

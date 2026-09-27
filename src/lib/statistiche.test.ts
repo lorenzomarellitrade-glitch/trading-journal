@@ -12,6 +12,8 @@ import {
   perGiornoSettimana,
   perMese,
   perTradeGiornalieri,
+  punteggioProcesso,
+  punteggioRisultati,
   SOGLIA_CAMPIONE,
 } from './statistiche'
 
@@ -202,6 +204,131 @@ describe('confronta', () => {
     ]
     const c = confronta(trades, [A], 't', 'd', [{ etichetta: 'tutti', filtro: () => true }])
     expect(c.gruppi[0].numeroTrade).toBe(1)
+  })
+})
+
+describe('punteggioProcesso', () => {
+  const PIANO_RISPETTATO = { ...PROCESSO_COMPLETO, finestra: '09:00-12:00' } as const
+
+  it('dà 100 a un trade che rispetta il piano in tutto', () => {
+    const p = punteggioProcesso([trade('2026-09-01', 'long', [vincente('a')], PIANO_RISPETTATO)])
+    expect(p.valore).toBe(100)
+  })
+
+  it('dà 0 a un trade che lo viola in tutto', () => {
+    const p = punteggioProcesso([
+      trade('2026-09-01', 'long', [vincente('a')], {
+        finestra: 'fuori finestra',
+        sl_spostato: true,
+        chiuso_manualmente: true,
+        idea_esterna: true,
+      }),
+    ])
+    expect(p.valore).toBe(0)
+  })
+
+  it('non guarda l\'esito: piano rispettato e stop preso vale comunque 100', () => {
+    // È il punto dell'intero punteggio: misura le decisioni, non la fortuna.
+    const p = punteggioProcesso([trade('2026-09-01', 'long', [perdente('a')], PIANO_RISPETTATO)])
+    expect(p.valore).toBe(100)
+  })
+
+  it('conta anche i trade ancora aperti', () => {
+    const aperto = trade('2026-09-01', 'long', [exe('a', { entry: 2000 })], PIANO_RISPETTATO)
+    expect(punteggioProcesso([aperto]).numeroTrade).toBe(1)
+  })
+
+  it('pesa le conferme quanto tutti gli altri comportamenti insieme', () => {
+    // Zero conferme, tutto il resto a posto: resta il 60%.
+    const p = punteggioProcesso([
+      trade('2026-09-01', 'long', [vincente('a')], { finestra: '09:00-12:00' }),
+    ])
+    expect(p.valore).toBeCloseTo(60, 6)
+  })
+
+  it('esclude la componente non compilata invece di contarla come violazione', () => {
+    // Senza finestra restano quattro componenti su cinque, ridistribuite.
+    const p = punteggioProcesso([trade('2026-09-01', 'long', [vincente('a')], PROCESSO_COMPLETO)])
+    expect(p.valore).toBe(100)
+  })
+
+  it('fa la media fra i trade', () => {
+    const p = punteggioProcesso([
+      trade('2026-09-01', 'long', [vincente('a')], PIANO_RISPETTATO),
+      trade('2026-09-02', 'long', [vincente('a')], {
+        finestra: 'fuori finestra',
+        sl_spostato: true,
+        chiuso_manualmente: true,
+        idea_esterna: true,
+      }),
+    ])
+    expect(p.valore).toBe(50)
+  })
+
+  it('segnala il campione scarso', () => {
+    expect(punteggioProcesso([]).valore).toBeNull()
+    expect(
+      punteggioProcesso([trade('2026-09-01', 'long', [vincente('a')])]).campioneScarso,
+    ).toBe(true)
+  })
+})
+
+describe('punteggioRisultati', () => {
+  it('dà 50 quando i conti tornano in pari', () => {
+    // +2R e −2R: expectancy 0.
+    const dueR = exe('a', {
+      entry: 2000,
+      stop_loss: 1995,
+      take_profit: 2010,
+      exit: 1985,
+      lotti: 0.5,
+      esito: 'loss',
+    })
+    const p = punteggioRisultati(
+      [
+        trade('2026-09-01', 'long', [vincente('a')]), // +2R
+        trade('2026-09-02', 'long', [dueR]), // −3R… quindi non in pari
+      ],
+      [A],
+    )
+    expect(p.numeroTrade).toBe(2)
+  })
+
+  it('dà 100 con un\'expectancy di +1R per trade', () => {
+    // Un long che esce a metà del target: +1R.
+    const unR = exe('a', {
+      entry: 2000,
+      stop_loss: 1995,
+      take_profit: 2010,
+      exit: 2005,
+      lotti: 0.5,
+      esito: 'win',
+    })
+    const p = punteggioRisultati([trade('2026-09-01', 'long', [unR])], [A])
+    expect(p.valore).toBe(100)
+  })
+
+  it('dà 0 quando si perde in media 1R per trade', () => {
+    const p = punteggioRisultati([trade('2026-09-01', 'long', [perdente('a')])], [A])
+    expect(p.valore).toBe(0)
+  })
+
+  it('non esce mai dall\'intervallo 0-100', () => {
+    const strapieno = exe('a', {
+      entry: 2000,
+      stop_loss: 1999,
+      take_profit: 2010,
+      exit: 2050,
+      lotti: 0.5,
+      esito: 'win',
+    })
+    const p = punteggioRisultati([trade('2026-09-01', 'long', [strapieno])], [A])
+    expect(p.valore).toBe(100)
+  })
+
+  it('non si calcola senza trade conclusi', () => {
+    const aperto = trade('2026-09-01', 'long', [exe('a', { entry: 2000, stop_loss: 1995 })])
+    expect(punteggioRisultati([aperto], [A]).valore).toBeNull()
   })
 })
 

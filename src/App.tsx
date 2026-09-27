@@ -15,6 +15,7 @@ const Statistiche = lazy(() => import('./pagine/Statistiche'))
 const ImpostazioniPagina = lazy(() => import('./pagine/Impostazioni'))
 const FormTrade = lazy(() => import('./pagine/FormTrade'))
 const ResocontoTrade = lazy(() => import('./pagine/ResocontoTrade'))
+const Journal = lazy(() => import('./pagine/Journal'))
 
 function Attesa() {
   return <p className="text-sm text-testo-soft">Caricamento…</p>
@@ -52,6 +53,7 @@ function AppAutenticata() {
             <Route path="/trade/:id/modifica" element={<FormTrade />} />
             <Route path="/trade/:id" element={<ResocontoTrade />} />
             <Route path="/statistiche" element={<Statistiche />} />
+            <Route path="/journal" element={<Journal />} />
             <Route path="/impostazioni" element={<ImpostazioniPagina />} />
             <Route path="*" element={<Navigate to="/calendario" replace />} />
           </Routes>

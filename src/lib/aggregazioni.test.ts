@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   consumoRischio,
+  giornateVinteEPerse,
   intensita,
+  perditaPeggiorePercent,
   metricheTrade,
   perditaPercent,
   raggruppaPerGiorno,
@@ -198,6 +200,66 @@ describe('perditaPercent', () => {
   it('ignora i trade fuori dall\'intervallo', () => {
     const t = [trade('2026-08-31', 'long', [perdente('a')])]
     expect(perditaPercent(t, A, '2026-09-01', '2026-09-01')).toBe(0)
+  })
+})
+
+describe('giornateVinteEPerse', () => {
+  it('conta le giornate, non i singoli trade', () => {
+    // Primo giorno: uno stop da −250 e una vincita da +500, netto +250.
+    // Due trade in perdita su tre, ma la giornata è vinta.
+    const g = giornateVinteEPerse(
+      [
+        trade('2026-09-01', 'long', [perdente('a')]),
+        trade('2026-09-01', 'long', [vincente('a')]),
+        trade('2026-09-02', 'long', [perdente('a')]),
+      ],
+      [A],
+    )
+
+    expect(g.vinte).toBe(1)
+    expect(g.perse).toBe(1)
+  })
+
+  it('una giornata che si compensa esattamente non è né vinta né persa', () => {
+    const g = giornateVinteEPerse(
+      [
+        trade('2026-09-01', 'long', [perdente('a')]), // −250
+        trade('2026-09-01', 'long', [perdente('a')]), // −250
+        trade('2026-09-01', 'long', [vincente('a')]), // +500
+      ],
+      [A],
+    )
+
+    expect(g.pari).toBe(1)
+    expect(g.vinte).toBe(0)
+    expect(g.perse).toBe(0)
+  })
+
+  it('distingue le giornate chiuse in pari', () => {
+    const pari = exe('a', { entry: 2000, stop_loss: 1995, exit: 2000, lotti: 0.5, esito: 'breakeven' })
+    const g = giornateVinteEPerse([trade('2026-09-01', 'long', [pari])], [A])
+
+    expect(g.pari).toBe(1)
+    expect(g.vinte).toBe(0)
+    expect(g.perse).toBe(0)
+  })
+
+  it('ignora le giornate senza trade conclusi', () => {
+    const aperto = trade('2026-09-01', 'long', [exe('a', { entry: 2000, stop_loss: 1995 })])
+    const g = giornateVinteEPerse([aperto], [A])
+
+    expect(g.vinte + g.perse + g.pari).toBe(0)
+  })
+})
+
+describe('perditaPeggiorePercent', () => {
+  it('prende il conto messo peggio, non la media', () => {
+    const t = [trade('2026-09-01', 'long', [perdente('a'), vincente('b')])]
+    expect(perditaPeggiorePercent(t, ENTRAMBI, '2026-09-01', '2026-09-01')).toBe(0.25)
+  })
+
+  it('vale 0 senza conti selezionati', () => {
+    expect(perditaPeggiorePercent([], [], '2026-09-01', '2026-09-01')).toBe(0)
   })
 })
 

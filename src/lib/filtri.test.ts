@@ -67,6 +67,44 @@ describe('filtraTrades', () => {
   })
 })
 
+describe('ricerca libera', () => {
+  const CON_NOTE = [
+    trade('2026-09-01', 'long', [vincente('a')], {
+      nota_uscita: 'Uscito al target come da piano',
+      emozione: 'calmo',
+    }),
+    trade('2026-09-05', 'short', [perdente('a')], {
+      nota_uscita: 'Ho chiuso prima per paura',
+      emozione: 'ansioso',
+    }),
+  ]
+
+  it('cerca nelle note', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: 'paura' }))).toHaveLength(1)
+  })
+
+  it('cerca nell\'emozione', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: 'calmo' }))).toHaveLength(1)
+  })
+
+  it('cerca nella direzione e nella data', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: 'short' }))).toHaveLength(1)
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: '2026-09' }))).toHaveLength(2)
+  })
+
+  it('ignora maiuscole e spazi attorno', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: '  PAURA ' }))).toHaveLength(1)
+  })
+
+  it('con testo vuoto non filtra niente', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: '   ' }))).toHaveLength(2)
+  })
+
+  it('non trova nulla se il testo non compare da nessuna parte', () => {
+    expect(filtraTrades(CON_NOTE, ENTRAMBI, con({ testo: 'zzz' }))).toHaveLength(0)
+  })
+})
+
 describe('ordinaTrades', () => {
   it('ordina per data nei due versi', () => {
     expect(ordinaTrades(TRADES, ENTRAMBI, 'data', 'asc')[0].data).toBe('2026-09-01')

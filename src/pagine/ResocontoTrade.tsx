@@ -124,7 +124,7 @@ function Ingrandimento({ src, onChiudi }: { src: string; onChiudi: () => void })
       role="dialog"
       aria-modal="true"
       onClick={onChiudi}
-      className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-testo/85 p-2 sm:p-6"
+      className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-sfondo/92 p-2 sm:p-6"
     >
       <img
         src={src}

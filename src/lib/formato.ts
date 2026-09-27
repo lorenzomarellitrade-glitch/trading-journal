@@ -97,6 +97,18 @@ export function formattaData(iso: string | null | undefined): string {
   })
 }
 
+/** Data ISO → 'lunedì 27 settembre 2026', per le intestazioni di giornata. */
+export function formattaDataEstesa(iso: string | null | undefined): string {
+  if (!iso) return VUOTO
+  const [anno, mese, giorno] = iso.split('-').map(Number)
+  return new Date(anno, mese - 1, giorno).toLocaleDateString(LOCALE, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 /** Data di oggi come 'YYYY-MM-DD' nel fuso orario locale. */
 export function oggiIso(): string {
   const d = new Date()

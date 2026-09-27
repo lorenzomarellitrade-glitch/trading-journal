@@ -137,21 +137,46 @@ export function Conferma({
   )
 }
 
+/** Icona in un riquadro colorato, come segno di riconoscimento di una metrica. */
+export function Icona({ percorso }: { percorso: string }) {
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accento/15 text-accento">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-4 w-4"
+        aria-hidden="true"
+      >
+        <path d={percorso} />
+      </svg>
+    </span>
+  )
+}
+
 /** Riquadro di una metrica singola, usato nelle statistiche. */
 export function Kpi({
   etichetta,
   valore,
   classe = 'text-testo',
   nota,
+  icona,
 }: {
   etichetta: string
   valore: string
   classe?: string
   nota?: string
+  icona?: string
 }) {
   return (
     <div className="rounded-card border border-bordo bg-superficie px-4 py-3">
-      <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
+      <div className="flex items-start justify-between gap-2">
+        <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
+        {icona && <Icona percorso={icona} />}
+      </div>
       <dd className={`num mt-0.5 text-lg ${classe}`}>{valore}</dd>
       {nota && <p className="num text-[11px] text-testo-soft">{nota}</p>}
     </div>
@@ -174,7 +199,7 @@ export function Casella({
         type="checkbox"
         checked={attiva}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-[#B08968]"
+        className="h-4 w-4 accent-accento"
       />
       {etichetta}
     </label>

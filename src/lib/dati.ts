@@ -1,5 +1,13 @@
 import { supabase } from './supabase'
-import type { Account, Execution, Impostazioni, Trade, TradeCompleto } from './tipi'
+import type {
+  Account,
+  Canale,
+  Execution,
+  Impostazioni,
+  NotaJournal,
+  Trade,
+  TradeCompleto,
+} from './tipi'
 
 /**
  * Accesso ai dati. Tutte le query passano da qui: i componenti non chiamano
@@ -149,6 +157,69 @@ async function sincronizzaExecutions(tradeId: string, bozze: BozzaExecution[]): 
   )
 
   if (error) throw new Error(`Salvataggio executions fallito: ${error.message}`)
+}
+
+// ---------------------------------------------------------------------------
+// Journal emotivo
+// ---------------------------------------------------------------------------
+
+/**
+ * I messaggi di un canale in un intervallo di date, dal più vecchio al più
+ * recente: è l'ordine in cui si legge una chat.
+ */
+export async function caricaNote(
+  canale: Canale,
+  da: string,
+  a: string,
+): Promise<NotaJournal[]> {
+  const { data, error } = await supabase
+    .from('note_journal')
+    .select('*')
+    .eq('canale', canale)
+    .gte('data', da)
+    .lte('data', a)
+    .order('data', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error(`Caricamento note fallito: ${error.message}`)
+  return data ?? []
+}
+
+/**
+ * I mesi in cui esiste almeno una nota, dal più recente, come 'YYYY-MM'.
+ * Serve a riempire il menu dei mesi senza proporne di vuoti.
+ */
+export async function caricaMesiConNote(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('note_journal')
+    .select('data')
+    .order('data', { ascending: false })
+
+  if (error) throw new Error(`Caricamento mesi fallito: ${error.message}`)
+
+  const mesi = new Set((data ?? []).map((r) => r.data.slice(0, 7)))
+  return [...mesi].sort((a, b) => b.localeCompare(a))
+}
+
+export async function creaNota(canale: Canale, data: string, testo: string): Promise<NotaJournal> {
+  const { data: creata, error } = await supabase
+    .from('note_journal')
+    .insert({ canale, data, testo })
+    .select('*')
+    .single()
+
+  if (error) throw new Error(`Salvataggio nota fallito: ${error.message}`)
+  return creata
+}
+
+export async function aggiornaNota(id: string, testo: string): Promise<void> {
+  const { error } = await supabase.from('note_journal').update({ testo }).eq('id', id)
+  if (error) throw new Error(`Modifica nota fallita: ${error.message}`)
+}
+
+export async function eliminaNota(id: string): Promise<void> {
+  const { error } = await supabase.from('note_journal').delete().eq('id', id)
+  if (error) throw new Error(`Eliminazione nota fallita: ${error.message}`)
 }
 
 /** Elimina un trade. Le executions spariscono da sole per via del cascade. */

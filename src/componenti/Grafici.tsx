@@ -12,15 +12,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { COLORI, COLORI_SERIE, RGB } from '../lib/colori'
 import type { BarraR, PuntoEquity, RigaDisciplina } from '../lib/statistiche'
 import { formattaData, formattaUsd } from '../lib/formato'
 import type { Account } from '../lib/tipi'
 
-/** Tinte terra distinguibili fra loro senza uscire dalla palette. */
-const COLORI_SERIE = ['#B08968', '#7D8471', '#8C7B6B', '#A8735A']
-
-const ASSE = { stroke: '#7A7268', fontSize: 11 }
-const GRIGLIA = '#E0D8CC'
+const ASSE = { stroke: COLORI.testoSoft, fontSize: 11 }
+const GRIGLIA = COLORI.bordo
 
 /**
  * Recharts passa ai formatter un `ValueType | undefined` (numero, stringa o
@@ -32,11 +30,11 @@ function aNumero(v: unknown): number | null {
 }
 
 const STILE_TOOLTIP = {
-  backgroundColor: '#FAF7F2',
-  border: '1px solid #E0D8CC',
+  backgroundColor: COLORI.superficie,
+  border: `1px solid ${COLORI.bordo}`,
   borderRadius: '0.5rem',
   fontSize: '12px',
-  color: '#3D3833',
+  color: COLORI.testo,
 }
 
 /** P&L cumulativo nel tempo, una linea per account. */
@@ -75,13 +73,13 @@ export function GraficoEquity({
           tickFormatter={(v: number) => v.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
         />
         {/* Lo zero è il riferimento che conta: sopra si guadagna, sotto si perde. */}
-        <ReferenceLine y={0} stroke="#7A7268" strokeWidth={1} />
+        <ReferenceLine y={0} stroke={COLORI.testoSoft} strokeWidth={1} />
         <Tooltip
           contentStyle={STILE_TOOLTIP}
           labelFormatter={(v) => formattaData(String(v))}
           formatter={(valore, nome) => [formattaUsd(aNumero(valore), true), String(nome)]}
         />
-        <Legend wrapperStyle={{ fontSize: '12px', color: '#7A7268' }} />
+        <Legend wrapperStyle={{ fontSize: '12px', color: COLORI.testoSoft }} />
 
         {account.map((a, i) => (
           <Line
@@ -102,11 +100,11 @@ export function GraficoEquity({
 
 /** Le cinque serie della disciplina, con il verso "buono" di ciascuna. */
 const SERIE_DISCIPLINA = [
-  { chiave: 'processoCompleto', nome: '5/5 conferme', colore: '#7D8471' },
-  { chiave: 'slSpostato', nome: 'SL spostato', colore: '#A8735A' },
-  { chiave: 'chiusoManualmente', nome: 'Chiuso a mano', colore: '#B08968' },
-  { chiave: 'fuoriFinestra', nome: 'Fuori finestra', colore: '#8C7B6B' },
-  { chiave: 'ideaEsterna', nome: 'Idea esterna', colore: '#9A8F80' },
+  { chiave: 'processoCompleto', nome: '5/5 conferme', colore: COLORI.positivo },
+  { chiave: 'slSpostato', nome: 'SL spostato', colore: COLORI.negativo },
+  { chiave: 'chiusoManualmente', nome: 'Chiuso a mano', colore: COLORI.accento },
+  { chiave: 'fuoriFinestra', nome: 'Fuori finestra', colore: '#A2937F' },
+  { chiave: 'ideaEsterna', nome: 'Idea esterna', colore: '#8B8275' },
 ] as const
 
 /**
@@ -143,7 +141,7 @@ export function GraficoDisciplina({ righe }: { righe: RigaDisciplina[] }) {
             return [n == null ? '—' : `${n.toFixed(0)}%`, String(nome)]
           }}
         />
-        <Legend wrapperStyle={{ fontSize: '12px', color: '#7A7268' }} />
+        <Legend wrapperStyle={{ fontSize: '12px', color: COLORI.testoSoft }} />
 
         {SERIE_DISCIPLINA.map((s) => (
           <Line
@@ -182,14 +180,14 @@ export function GraficoDistribuzioneR({ barre }: { barre: BarraR[] }) {
           contentStyle={STILE_TOOLTIP}
           formatter={(v) => [`${aNumero(v) ?? 0} trade`, 'Conteggio']}
           labelFormatter={(v) => `R fra ${v}`}
-          cursor={{ fill: 'rgba(176, 137, 104, 0.08)' }}
+          cursor={{ fill: `rgba(${RGB.accento}, 0.12)` }}
         />
         <Bar dataKey="conteggio" radius={[3, 3, 0, 0]}>
           {/* Le barre in perdita restano mattone, quelle in utile oliva.
               <Cell> dev'essere figlio diretto di <Bar>: Recharts ispeziona i
               propri figli per tipo e non riconoscerebbe un wrapper. */}
           {barre.map((b) => (
-            <Cell key={b.etichetta} fill={b.a <= 0 ? '#A8735A' : '#7D8471'} />
+            <Cell key={b.etichetta} fill={b.a <= 0 ? COLORI.negativo : COLORI.positivo} />
           ))}
         </Bar>
       </BarChart>

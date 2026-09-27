@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { immagineSnapshot } from './tradingview'
+import { trade, vincente } from './fixture'
+import { immagineSnapshot, linkAnteprima } from './tradingview'
 
 describe('immagineSnapshot', () => {
   it('ricava l\'immagine dal link di uno snapshot', () => {
@@ -51,5 +52,40 @@ describe('immagineSnapshot', () => {
     expect(immagineSnapshot(null)).toBeNull()
     expect(immagineSnapshot('')).toBeNull()
     expect(immagineSnapshot('non è un link')).toBeNull()
+  })
+})
+
+describe('linkAnteprima', () => {
+  const t = (link: Record<string, string>) =>
+    trade('2026-09-01', 'long', [vincente('a')], link)
+
+  it('preferisce il timeframe dell\'esecuzione a quelli di contesto', () => {
+    const scelto = linkAnteprima(
+      t({
+        link_daily: 'https://www.tradingview.com/x/DDDD1111/',
+        link_h1: 'https://www.tradingview.com/x/HHHH1111/',
+        link_m15: 'https://www.tradingview.com/x/MMMM1111/',
+      }),
+    )
+    expect(scelto).toContain('MMMM1111')
+  })
+
+  it('ripiega sul timeframe più alto disponibile', () => {
+    const scelto = linkAnteprima(t({ link_daily: 'https://www.tradingview.com/x/DDDD1111/' }))
+    expect(scelto).toContain('DDDD1111')
+  })
+
+  it('ignora i link da cui non si ricava un\'immagine', () => {
+    const scelto = linkAnteprima(
+      t({
+        link_m15: 'https://www.tradingview.com/chart/XAUUSD/abc/',
+        link_h4: 'https://www.tradingview.com/x/HHHH4444/',
+      }),
+    )
+    expect(scelto).toContain('HHHH4444')
+  })
+
+  it('restituisce null se il trade non ha grafici', () => {
+    expect(linkAnteprima(t({}))).toBeNull()
   })
 })

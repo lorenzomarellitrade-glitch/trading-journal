@@ -10,6 +10,8 @@ export interface Filtri {
   finestra: Finestra | null
   /** Mostra solo i trade con tutte e 5 le conferme */
   soloProcessoCompleto: boolean
+  /** Ricerca libera su note, emozione, direzione, finestra e data */
+  testo: string | null
 }
 
 export const FILTRI_VUOTI: Filtri = {
@@ -18,6 +20,22 @@ export const FILTRI_VUOTI: Filtri = {
   esito: null,
   finestra: null,
   soloProcessoCompleto: false,
+  testo: null,
+}
+
+/**
+ * Campi in cui cerca la barra di ricerca. Sono i campi scritti a mano più la
+ * data: cercare "ansioso" o "settembre" deve trovare qualcosa.
+ */
+function corrisponde(trade: TradeCompleto, cerca: string): boolean {
+  const campi = [
+    trade.nota_uscita,
+    trade.emozione,
+    trade.direzione,
+    trade.finestra,
+    trade.data,
+  ]
+  return campi.some((c) => c != null && c.toLowerCase().includes(cerca))
 }
 
 /**
@@ -35,8 +53,10 @@ export function filtraTrades(
   filtri: Filtri,
 ): TradeCompleto[] {
   const ids = new Set(account.map((a) => a.id))
+  const cerca = filtri.testo?.trim().toLowerCase() ?? ''
 
   return trades.filter((t) => {
+    if (cerca !== '' && !corrisponde(t, cerca)) return false
     if (filtri.da && t.data < filtri.da) return false
     if (filtri.a && t.data > filtri.a) return false
     if (filtri.finestra && t.finestra !== filtri.finestra) return false

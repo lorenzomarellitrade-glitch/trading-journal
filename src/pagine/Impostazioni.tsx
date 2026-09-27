@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { numeroDaInput } from '../lib/formato'
 import type { Account } from '../lib/tipi'
 
 const IMPOSTAZIONI_DEFAULT = {
@@ -15,6 +16,14 @@ interface BozzaAccount {
   saldo_iniziale: string
   valuta: string
   attivo: boolean
+  /** Vuoti sui conti senza regole da rispettare, es. un conto reale personale. */
+  target: string
+  drawdownGiorno: string
+  drawdown: string
+}
+
+function testoDaNumero(n: number | null): string {
+  return n == null ? '' : String(n)
 }
 
 function bozzaDa(a: Account): BozzaAccount {
@@ -24,6 +33,9 @@ function bozzaDa(a: Account): BozzaAccount {
     saldo_iniziale: String(a.saldo_iniziale),
     valuta: a.valuta,
     attivo: a.attivo,
+    target: testoDaNumero(a.target_profitto_percent),
+    drawdownGiorno: testoDaNumero(a.drawdown_giornaliero_percent),
+    drawdown: testoDaNumero(a.drawdown_massimo_percent),
   }
 }
 
@@ -69,7 +81,16 @@ export default function ImpostazioniPagina() {
   function nuovoAccount() {
     setAccount((prec) => [
       ...prec,
-      { id: null, nome: '', saldo_iniziale: '100000', valuta: 'USD', attivo: true },
+      {
+        id: null,
+        nome: '',
+        saldo_iniziale: '100000',
+        valuta: 'USD',
+        attivo: true,
+        target: '',
+        drawdownGiorno: '',
+        drawdown: '',
+      },
     ])
   }
 
@@ -84,11 +105,29 @@ export default function ImpostazioniPagina() {
         return
       }
 
+      // Campo vuoto significa "nessun obiettivo": va salvato come null, non 0.
+      const target = numeroDaInput(a.target)
+      const drawdownGiorno = numeroDaInput(a.drawdownGiorno)
+      const drawdown = numeroDaInput(a.drawdown)
+      for (const [valore, nome] of [
+        [target, 'Target profitto'],
+        [drawdownGiorno, 'Drawdown giornaliero'],
+        [drawdown, 'Drawdown massimo'],
+      ] as const) {
+        if (valore != null && valore <= 0) {
+          setMessaggio({ tipo: 'errore', testo: `${nome} non valido per "${a.nome}".` })
+          return
+        }
+      }
+
       const riga = {
         nome: a.nome.trim(),
         saldo_iniziale: saldo,
         valuta: a.valuta.trim() || 'USD',
         attivo: a.attivo,
+        target_profitto_percent: target,
+        drawdown_giornaliero_percent: drawdownGiorno,
+        drawdown_massimo_percent: drawdown,
       }
 
       const ris = a.id
@@ -119,21 +158,23 @@ export default function ImpostazioniPagina() {
   if (caricamento) return <p className="text-sm text-testo-soft">Caricamento…</p>
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <h1 className="text-xl font-medium tracking-tight">Impostazioni</h1>
 
       {/* --- Account --------------------------------------------------- */}
       <section className="rounded-card border border-bordo bg-superficie p-5">
         <h2 className="text-sm font-medium text-testo">Account</h2>
         <p className="mt-1 text-xs text-testo-soft">
-          I saldi iniziali sono la base per il calcolo di P&amp;L% e rischio%.
+          I saldi iniziali sono la base per il calcolo di P&amp;L% e rischio%. Target e drawdown
+          servono solo ai conti prop: lasciali vuoti su un conto reale, e non comparirà nessun
+          obiettivo.
         </p>
 
         <div className="mt-4 space-y-3">
           {account.map((a, i) => (
             <div
               key={a.id ?? `nuovo-${i}`}
-              className="grid grid-cols-2 gap-3 rounded-md border border-bordo bg-sfondo p-3 sm:grid-cols-[1fr_9rem_5rem_auto]"
+              className="grid grid-cols-2 gap-3 rounded-md border border-bordo bg-sfondo p-3 sm:grid-cols-3 lg:grid-cols-[1fr_8rem_4rem_5rem_5rem_5rem_auto]"
             >
               <label className="col-span-2 sm:col-span-1">
                 <span className="text-xs text-testo-soft">Nome</span>
@@ -165,12 +206,51 @@ export default function ImpostazioniPagina() {
                 />
               </label>
 
+              <label>
+                <span className="text-xs text-testo-soft">Target %</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={a.target}
+                  onChange={(e) => aggiornaAccount(i, { target: e.target.value })}
+                  placeholder="—"
+                  className="num mt-0.5 w-full rounded border border-bordo bg-superficie px-2 py-1.5 text-sm"
+                />
+              </label>
+
+              <label>
+                <span className="text-xs text-testo-soft">DD giorno %</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={a.drawdownGiorno}
+                  onChange={(e) => aggiornaAccount(i, { drawdownGiorno: e.target.value })}
+                  placeholder="—"
+                  className="num mt-0.5 w-full rounded border border-bordo bg-superficie px-2 py-1.5 text-sm"
+                />
+              </label>
+
+              <label>
+                <span className="text-xs text-testo-soft">DD totale %</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={a.drawdown}
+                  onChange={(e) => aggiornaAccount(i, { drawdown: e.target.value })}
+                  placeholder="—"
+                  className="num mt-0.5 w-full rounded border border-bordo bg-superficie px-2 py-1.5 text-sm"
+                />
+              </label>
+
               <label className="flex items-end gap-2 pb-1.5 text-sm text-testo-soft">
                 <input
                   type="checkbox"
                   checked={a.attivo}
                   onChange={(e) => aggiornaAccount(i, { attivo: e.target.checked })}
-                  className="h-4 w-4 accent-[#B08968]"
+                  className="h-4 w-4 accent-accento"
                 />
                 Attivo
               </label>

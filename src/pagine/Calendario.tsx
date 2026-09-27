@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   consumoRischio,
+  giornateVinteEPerse,
   intensita,
   metricheTrade,
+  perditaPeggiorePercent,
   raggruppaPerGiorno,
   riepiloga,
 } from '../lib/aggregazioni'
@@ -16,6 +18,7 @@ import {
   primoDelMese,
   spostaMese,
   ultimoDelMese,
+  type GiornoGriglia,
 } from '../lib/date'
 import {
   formattaData,
@@ -27,38 +30,52 @@ import {
   oraBreve,
   VUOTO,
 } from '../lib/formato'
+import { RGB } from '../lib/colori'
+import { statoConti } from '../lib/obiettivi'
 import type { Account, TradeCompleto } from '../lib/tipi'
 import BarraRischio from '../componenti/BarraRischio'
+import StatoConti from '../componenti/StatoConti'
 import SelettoreAccount, {
   accountSelezionati,
   type SelezioneAccount,
 } from '../componenti/SelettoreAccount'
 
-// Componenti RGB della palette, per costruire gli sfondi a intensità variabile.
-const VERDE_OLIVA = '125, 132, 113' // #7D8471
-const MATTONE = '168, 115, 90' // #A8735A
-
 /** Opacità massima di una casella: oltre si perde la leggibilità del testo. */
-const OPACITA_MAX = 0.5
+const OPACITA_MAX = 0.55
 
 function sfondoGiorno(pnl: number | null, massimo: number): string | undefined {
   if (pnl == null || pnl === 0) return undefined
   const alpha = intensita(pnl, massimo) * OPACITA_MAX
-  return `rgba(${pnl > 0 ? VERDE_OLIVA : MATTONE}, ${alpha})`
-}
-
-function Metrica({ etichetta, valore, classe = '' }: { etichetta: string; valore: string; classe?: string }) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
-      <dd className={`num text-sm ${classe || 'text-testo'}`}>{valore}</dd>
-    </div>
-  )
+  return `rgba(${pnl > 0 ? RGB.positivo : RGB.negativo}, ${alpha})`
 }
 
 function classeSegno(n: number | null): string {
   if (n == null || n === 0) return 'text-testo'
   return n > 0 ? 'text-positivo' : 'text-negativo'
+}
+
+function Voce({
+  etichetta,
+  valore,
+  classe,
+}: {
+  etichetta: string
+  valore: string
+  classe?: string
+}) {
+  return (
+    <div>
+      <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
+      <dd className={`num text-sm ${classe ?? 'text-testo'}`}>{valore}</dd>
+    </div>
+  )
+}
+
+/** Dati precalcolati di una casella giorno. */
+interface DatiGiorno {
+  pnl: number | null
+  percent: number | null
+  numero: number
 }
 
 export default function Calendario() {
@@ -107,18 +124,22 @@ export default function Calendario() {
     }
   }, [])
 
-  const selezionati = useMemo(
-    () => accountSelezionati(account, selezione),
-    [account, selezione],
-  )
+  const selezionati = useMemo(() => accountSelezionati(account, selezione), [account, selezione])
+  /** I limiti di perdita riguardano solo i conti su cui si opera adesso. */
+  const attivi = useMemo(() => selezionati.filter((a) => a.attivo), [selezionati])
 
   const griglia = useMemo(() => grigliaMese(anno, mese), [anno, mese])
-
   const perGiorno = useMemo(() => raggruppaPerGiorno(trades), [trades])
 
-  /** P&L per ogni casella della griglia, con il massimo per la scala colore. */
+  /** Le caselle divise in settimane, da lunedì a domenica. */
+  const settimane = useMemo(() => {
+    const righe: GiornoGriglia[][] = []
+    for (let i = 0; i < griglia.length; i += 7) righe.push(griglia.slice(i, i + 7))
+    return righe
+  }, [griglia])
+
   const { pnlPerGiorno, massimoAssoluto } = useMemo(() => {
-    const mappa = new Map<string, { pnl: number | null; numero: number; percent: number | null }>()
+    const mappa = new Map<string, DatiGiorno>()
     let massimo = 0
 
     for (const casella of griglia) {
@@ -144,20 +165,39 @@ export default function Calendario() {
     () => riepiloga(tradesDelMese, selezionati),
     [tradesDelMese, selezionati],
   )
+  const giornate = useMemo(
+    () => giornateVinteEPerse(tradesDelMese, selezionati),
+    [tradesDelMese, selezionati],
+  )
+
+  /**
+   * Lo stato dei conti ignora sia il selettore sia il mese: parla dei conti,
+   * non del periodo. Servono a vedere in un colpo d'occhio che nessuno dei due
+   * conti sia vicino a un limite, anche mentre se ne guarda un altro.
+   */
+  const tuttiAttivi = useMemo(() => account.filter((a) => a.attivo), [account])
+  const stati = useMemo(
+    () => statoConti(trades, tuttiAttivi, oggi),
+    [trades, tuttiAttivi, oggi],
+  )
 
   const consumo = useMemo(
     () =>
       consumoRischio(
         trades,
-        // I limiti valgono solo per i conti su cui si opera oggi: un conto di
-        // fase chiusa non può più sforare nulla.
-        selezionati.filter((a) => a.attivo),
+        attivi,
         oggi,
         limiti.limite_giornaliero_percent,
         limiti.limite_settimanale_percent,
       ),
-    [trades, selezionati, oggi, limiti],
+    [trades, attivi, oggi, limiti],
   )
+
+  function vaiA(nuovoAnno: number, nuovoMese: number) {
+    setAnno(nuovoAnno)
+    setMese(nuovoMese)
+    setGiornoAperto(null)
+  }
 
   function apriGiorno(iso: string) {
     const delGiorno = perGiorno.get(iso)
@@ -179,129 +219,273 @@ export default function Calendario() {
     )
   }
 
+  const sulMeseCorrente =
+    anno === new Date().getFullYear() && mese === new Date().getMonth()
+
   return (
     <div className="space-y-4">
-      {/* --- Riepilogo del mese ------------------------------------------- */}
-      <div className="rounded-card border border-bordo bg-superficie p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1">
+      {/* --- Barra superiore ---------------------------------------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => vaiA(...spostaMese(anno, mese, -1))}
+            aria-label="Mese precedente"
+            className="rounded-md border border-bordo px-2 py-1 text-testo-soft transition-colors hover:text-testo"
+          >
+            ‹
+          </button>
+          <span className="min-w-40 px-2 text-center text-sm font-medium">
+            {etichettaMese(anno, mese)}
+          </span>
+          <button
+            onClick={() => vaiA(...spostaMese(anno, mese, 1))}
+            aria-label="Mese successivo"
+            className="rounded-md border border-bordo px-2 py-1 text-testo-soft transition-colors hover:text-testo"
+          >
+            ›
+          </button>
+          {!sulMeseCorrente && (
             <button
-              onClick={() => {
-                const [y, m] = spostaMese(anno, mese, -1)
-                setAnno(y)
-                setMese(m)
-                setGiornoAperto(null)
-              }}
-              aria-label="Mese precedente"
-              className="rounded-md border border-bordo px-2 py-1 text-testo-soft transition-colors hover:text-testo"
+              onClick={() => vaiA(new Date().getFullYear(), new Date().getMonth())}
+              className="ml-1 rounded-md border border-accento px-2.5 py-1 text-xs text-accento"
             >
-              ‹
+              Oggi
             </button>
-            <span className="min-w-40 px-2 text-center text-sm font-medium">
-              {etichettaMese(anno, mese)}
-            </span>
-            <button
-              onClick={() => {
-                const [y, m] = spostaMese(anno, mese, 1)
-                setAnno(y)
-                setMese(m)
-                setGiornoAperto(null)
-              }}
-              aria-label="Mese successivo"
-              className="rounded-md border border-bordo px-2 py-1 text-testo-soft transition-colors hover:text-testo"
-            >
-              ›
-            </button>
-          </div>
-
-          <SelettoreAccount account={account} selezione={selezione} onChange={setSelezione} />
+          )}
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Metrica
-            etichetta="P&L mese"
-            valore={riepilogoMese.numeroChiusi > 0 ? formattaUsd(riepilogoMese.pnlUsd, true) : VUOTO}
-            classe={classeSegno(riepilogoMese.numeroChiusi > 0 ? riepilogoMese.pnlUsd : null)}
-          />
-          <Metrica
-            etichetta="P&L %"
-            valore={
-              riepilogoMese.numeroChiusi > 0
-                ? formattaPercent(riepilogoMese.pnlPercent, 2, true)
-                : VUOTO
-            }
-            classe={classeSegno(riepilogoMese.numeroChiusi > 0 ? riepilogoMese.pnlUsd : null)}
-          />
-          <Metrica etichetta="Trade" valore={String(riepilogoMese.numeroTrade)} />
-          <Metrica
-            etichetta="Win rate"
-            valore={
-              riepilogoMese.winRate == null ? VUOTO : formattaPercent(riepilogoMese.winRate, 0)
-            }
-          />
-        </dl>
+        <SelettoreAccount account={account} selezione={selezione} onChange={setSelezione} />
       </div>
 
-      {/* --- Consumo dei limiti ------------------------------------------- */}
-      <BarraRischio consumo={consumo} />
+      {/* --- Stato dei conti, prima di tutto il resto --------------------- */}
+      <StatoConti stati={stati} />
 
-      {/* --- Griglia mensile ---------------------------------------------- */}
-      <div className="rounded-card border border-bordo bg-superficie p-2 sm:p-4">
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
-          {NOMI_GIORNI.map((g) => (
-            <div key={g} className="pb-1 text-center text-[11px] uppercase tracking-wide text-testo-soft">
-              {g}
-            </div>
-          ))}
-
-          {griglia.map((casella) => {
-            const dati = pnlPerGiorno.get(casella.iso)
-            const eOggi = casella.iso === oggi
-            const aperto = giornoAperto === casella.iso
-
-            return (
-              <button
-                key={casella.iso}
-                onClick={() => apriGiorno(casella.iso)}
-                style={{ backgroundColor: sfondoGiorno(dati?.pnl ?? null, massimoAssoluto) }}
-                className={`min-h-16 rounded-md border p-1.5 text-left transition-colors sm:min-h-20 sm:p-2 ${
-                  aperto ? 'border-accento' : eOggi ? 'border-testo-soft' : 'border-bordo'
-                } ${casella.nelMese ? '' : 'opacity-40'} hover:border-accento`}
-              >
-                <span
-                  className={`num text-xs ${eOggi ? 'font-medium text-testo' : 'text-testo-soft'}`}
-                >
-                  {casella.giorno}
-                </span>
-
-                {dati && (
-                  <span className="mt-0.5 block leading-tight">
-                    <span
-                      className={`num block text-xs sm:text-sm ${classeSegno(dati.pnl)}`}
-                    >
-                      {formattaUsdCompatto(dati.pnl)}
-                    </span>
-                    <span className={`num hidden text-[11px] sm:block ${classeSegno(dati.pnl)}`}>
-                      {formattaPercent(dati.percent, 2, true)}
-                    </span>
-                    <span className="num block text-[10px] text-testo-soft">
-                      {dati.numero} {dati.numero === 1 ? 'trade' : 'trade'}
-                    </span>
-                  </span>
+      <div className="grid gap-4 lg:grid-cols-[1fr_17rem]">
+        {/* --- Riepilogo del mese ----------------------------------------- */}
+        <aside className="space-y-4 lg:order-2">
+          <div className="rounded-card border border-bordo bg-superficie p-4">
+            <dl className="grid grid-cols-2 gap-4 lg:grid-cols-1">
+              <Voce
+                etichetta="P&L mese"
+                valore={
+                  riepilogoMese.numeroChiusi > 0
+                    ? formattaUsd(riepilogoMese.pnlUsd, true)
+                    : VUOTO
+                }
+                classe={`text-base ${classeSegno(
+                  riepilogoMese.numeroChiusi > 0 ? riepilogoMese.pnlUsd : null,
+                )}`}
+              />
+              <Voce
+                etichetta="P&L %"
+                valore={
+                  riepilogoMese.numeroChiusi > 0
+                    ? formattaPercent(riepilogoMese.pnlPercent, 2, true)
+                    : VUOTO
+                }
+                classe={classeSegno(
+                  riepilogoMese.numeroChiusi > 0 ? riepilogoMese.pnlUsd : null,
                 )}
-              </button>
-            )
-          })}
+              />
+              <Voce etichetta="Trade" valore={String(riepilogoMese.numeroTrade)} />
+              <Voce
+                etichetta="Win rate"
+                valore={
+                  riepilogoMese.winRate == null
+                    ? VUOTO
+                    : formattaPercent(riepilogoMese.winRate, 0)
+                }
+              />
+              <div className="col-span-2 lg:col-span-1">
+                <dt className="text-[11px] uppercase tracking-wide text-testo-soft">Giornate</dt>
+                <dd className="num text-sm">
+                  <span className="text-positivo">{giornate.vinte}</span>
+                  <span className="text-testo-soft"> in utile · </span>
+                  <span className="text-negativo">{giornate.perse}</span>
+                  <span className="text-testo-soft"> in perdita</span>
+                  {giornate.pari > 0 && (
+                    <span className="text-testo-soft"> · {giornate.pari} in pari</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <BarraRischio consumo={consumo} />
+        </aside>
+
+        {/* --- Griglia mensile -------------------------------------------- */}
+        <div className="rounded-card border border-bordo bg-superficie p-2 sm:p-4 lg:order-1">
+          <div className="grid grid-cols-[repeat(7,1fr)_3.5rem] gap-1 sm:gap-2">
+            {NOMI_GIORNI.map((g) => (
+              <div
+                key={g}
+                className="pb-1 text-center text-[11px] uppercase tracking-wide text-testo-soft"
+              >
+                {g}
+              </div>
+            ))}
+            <div className="pb-1 text-center text-[11px] uppercase tracking-wide text-testo-soft">
+              Sett.
+            </div>
+
+            {settimane.map((settimana) => (
+              <SettimanaRiga
+                key={settimana[0].iso}
+                settimana={settimana}
+                datiPerGiorno={pnlPerGiorno}
+                massimoAssoluto={massimoAssoluto}
+                oggi={oggi}
+                giornoAperto={giornoAperto}
+                onApri={apriGiorno}
+                trades={trades}
+                selezionati={selezionati}
+                attivi={attivi}
+                limiteSettimanale={limiti.limite_settimanale_percent}
+              />
+            ))}
+          </div>
+
+          <Legenda />
         </div>
       </div>
 
       {/* --- Pannello del giorno ------------------------------------------ */}
-      {giornoAperto && <PannelloGiorno
-        iso={giornoAperto}
-        trades={perGiorno.get(giornoAperto) ?? []}
-        account={selezionati}
-        onChiudi={() => setGiornoAperto(null)}
-      />}
+      {giornoAperto && (
+        <PannelloGiorno
+          iso={giornoAperto}
+          trades={perGiorno.get(giornoAperto) ?? []}
+          account={selezionati}
+          onChiudi={() => setGiornoAperto(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Una riga di sette giorni più il totale settimanale. */
+function SettimanaRiga({
+  settimana,
+  datiPerGiorno,
+  massimoAssoluto,
+  oggi,
+  giornoAperto,
+  onApri,
+  trades,
+  selezionati,
+  attivi,
+  limiteSettimanale,
+}: {
+  settimana: GiornoGriglia[]
+  datiPerGiorno: Map<string, DatiGiorno>
+  massimoAssoluto: number
+  oggi: string
+  giornoAperto: string | null
+  onApri: (iso: string) => void
+  trades: TradeCompleto[]
+  selezionati: Account[]
+  attivi: Account[]
+  limiteSettimanale: number
+}) {
+  const da = settimana[0].iso
+  const a = settimana[settimana.length - 1].iso
+
+  const dellaSettimana = trades.filter((t) => t.data >= da && t.data <= a)
+  const r = riepiloga(dellaSettimana, selezionati)
+  const chiusa = r.numeroChiusi > 0
+
+  // Quanto del limite settimanale è stato consumato dal conto messo peggio.
+  const perdita = perditaPeggiorePercent(trades, attivi, da, a)
+  const quota = limiteSettimanale > 0 ? perdita / limiteSettimanale : 0
+
+  return (
+    <>
+      {settimana.map((casella) => {
+        const dati = datiPerGiorno.get(casella.iso)
+        const eOggi = casella.iso === oggi
+        const aperto = giornoAperto === casella.iso
+
+        return (
+          <button
+            key={casella.iso}
+            onClick={() => onApri(casella.iso)}
+            style={{ backgroundColor: sfondoGiorno(dati?.pnl ?? null, massimoAssoluto) }}
+            className={`min-h-16 rounded-md border p-1.5 text-left transition-colors sm:min-h-20 sm:p-2 ${
+              aperto ? 'border-accento' : eOggi ? 'border-testo-soft' : 'border-bordo'
+            } ${casella.nelMese ? '' : 'opacity-40'} hover:border-accento`}
+          >
+            <span className={`num text-xs ${eOggi ? 'font-medium text-testo' : 'text-testo-soft'}`}>
+              {casella.giorno}
+            </span>
+
+            {dati && (
+              <span className="mt-0.5 block leading-tight">
+                <span className={`num block text-xs sm:text-sm ${classeSegno(dati.pnl)}`}>
+                  {formattaUsdCompatto(dati.pnl)}
+                </span>
+                <span className={`num hidden text-[11px] sm:block ${classeSegno(dati.pnl)}`}>
+                  {formattaPercent(dati.percent, 2, true)}
+                </span>
+                <span className="num block text-[10px] text-testo-soft">
+                  {dati.numero} trade
+                </span>
+              </span>
+            )}
+          </button>
+        )
+      })}
+
+      {/* Totale della settimana e consumo del limite */}
+      <div className="flex min-h-16 flex-col justify-center rounded-md bg-sfondo px-1 py-1.5 text-center sm:min-h-20">
+        {chiusa ? (
+          <>
+            <span className={`num block text-[11px] sm:text-xs ${classeSegno(r.pnlUsd)}`}>
+              {formattaUsdCompatto(r.pnlUsd)}
+            </span>
+            <span className={`num block text-[10px] ${classeSegno(r.pnlUsd)}`}>
+              {formattaPercent(r.pnlPercent, 1, true)}
+            </span>
+            {perdita > 0 && (
+              <span
+                className={`num mt-0.5 block text-[10px] ${
+                  quota >= 1 ? 'font-medium text-negativo' : quota >= 0.8 ? 'text-accento' : 'text-testo-soft'
+                }`}
+                title={`Consumo del limite settimanale del ${limiteSettimanale}%`}
+              >
+                {Math.round(quota * 100)}% lim.
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-[11px] text-testo-soft">—</span>
+        )}
+      </div>
+    </>
+  )
+}
+
+function Legenda() {
+  const voci = [
+    { colore: `rgba(${RGB.positivo}, 0.55)`, testo: 'Giornata in utile' },
+    { colore: `rgba(${RGB.negativo}, 0.55)`, testo: 'Giornata in perdita' },
+    { colore: 'transparent', testo: 'Nessun trade' },
+  ]
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-bordo pt-3 text-[11px] text-testo-soft">
+      {voci.map((v) => (
+        <span key={v.testo} className="flex items-center gap-1.5">
+          <span
+            className="h-3 w-3 rounded border border-bordo"
+            style={{ backgroundColor: v.colore }}
+            aria-hidden="true"
+          />
+          {v.testo}
+        </span>
+      ))}
+      <span className="text-testo-soft/70">
+        L'intensità del colore è proporzionale al giorno più mosso del mese.
+      </span>
     </div>
   )
 }
