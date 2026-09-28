@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
+import type { Posizione } from './journal'
 import type {
   Account,
-  Canale,
   Execution,
   Impostazioni,
   NotaJournal,
@@ -166,18 +166,27 @@ async function sincronizzaExecutions(tradeId: string, bozze: BozzaExecution[]): 
 /**
  * I messaggi di un canale in un intervallo di date, dal più vecchio al più
  * recente: è l'ordine in cui si legge una chat.
+ *
+ * `coppia` restringe ai messaggi di una sola coppia forex; null le prende tutte.
  */
 export async function caricaNote(
-  canale: Canale,
+  posizione: Posizione,
   da: string,
   a: string,
+  coppia: string | null = null,
 ): Promise<NotaJournal[]> {
-  const { data, error } = await supabase
+  let q = supabase
     .from('note_journal')
     .select('*')
-    .eq('canale', canale)
+    .eq('canale', posizione.canale)
     .gte('data', da)
     .lte('data', a)
+
+  // Lo Stato mentale non ha mercato: va cercato con "is null", non con "=".
+  q = posizione.mercato == null ? q.is('mercato', null) : q.eq('mercato', posizione.mercato)
+  if (coppia) q = q.eq('coppia', coppia)
+
+  const { data, error } = await q
     .order('data', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -201,10 +210,23 @@ export async function caricaMesiConNote(): Promise<string[]> {
   return [...mesi].sort((a, b) => b.localeCompare(a))
 }
 
-export async function creaNota(canale: Canale, data: string, testo: string): Promise<NotaJournal> {
+export async function creaNota(
+  posizione: Posizione,
+  data: string,
+  testo: string,
+  coppia: string | null,
+): Promise<NotaJournal> {
   const { data: creata, error } = await supabase
     .from('note_journal')
-    .insert({ canale, data, testo })
+    .insert({
+      canale: posizione.canale,
+      mercato: posizione.mercato,
+      // La coppia esiste solo sul forex: altrove va salvata vuota, anche se
+      // nel form ne era rimasta selezionata una da prima.
+      coppia: posizione.mercato === 'forex' ? coppia : null,
+      data,
+      testo,
+    })
     .select('*')
     .single()
 

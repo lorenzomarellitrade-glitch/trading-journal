@@ -32,7 +32,11 @@ begin
   end if;
 
   if not exists (select 1 from pg_type where typname = 'canale_journal') then
-    create type canale_journal as enum ('tp', 'stop', 'be', 'miss', 'stato-mentale');
+    create type canale_journal as enum ('visione', 'tp', 'stop', 'be', 'miss', 'stato-mentale');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'mercato_journal') then
+    create type mercato_journal as enum ('xauusd', 'forex');
   end if;
 end
 $$;
@@ -189,21 +193,33 @@ create trigger impostazioni_updated_at
 
 -- ---------------------------------------------------------------------------
 -- 6-bis. Tabella note_journal — il journal emotivo
---    Messaggi liberi divisi per canale. Il mese non è un campo: si ricava
---    dalla data, così non ci sono contenitori mensili da creare a mano.
+--    Messaggi liberi divisi per mercato e canale. Il mese non è un campo: si
+--    ricava dalla data, così non ci sono contenitori mensili da creare a mano.
+--    Lo Stato mentale non ha mercato: è in comune fra oro e forex.
 -- ---------------------------------------------------------------------------
 create table if not exists public.note_journal (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
   data       date not null default current_date,
+  mercato    mercato_journal,
   canale     canale_journal not null,
+  coppia     text,
   testo      text not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+
+  constraint note_mercato_coerente  check ((canale = 'stato-mentale') = (mercato is null)),
+  constraint note_coppia_solo_forex check (coppia is null or mercato = 'forex'),
+  constraint note_coppia_formato    check (coppia is null or coppia ~ '^[A-Z]{6}$'),
+  constraint note_coppia_sui_trade  check (
+    mercato is distinct from 'forex'
+    or canale not in ('tp', 'stop', 'be', 'miss')
+    or coppia is not null
+  )
 );
 
-create index if not exists note_journal_user_canale_data_idx
-  on public.note_journal (user_id, canale, data, created_at);
+create index if not exists note_journal_mercato_idx
+  on public.note_journal (user_id, mercato, canale, data, created_at);
 
 drop trigger if exists note_journal_updated_at on public.note_journal;
 create trigger note_journal_updated_at

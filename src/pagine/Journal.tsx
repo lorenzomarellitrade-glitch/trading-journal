@@ -7,22 +7,36 @@ import {
   eliminaNota,
 } from '../lib/dati'
 import { primoDelMese, ultimoDelMese } from '../lib/date'
+import { formattaData, formattaDataEstesa, oggiIso } from '../lib/formato'
+import {
+  CANALI_MERCATO,
+  COPPIE_FOREX,
+  coppiaObbligatoria,
+  descrizionePosizione,
+  MERCATI,
+  POSIZIONE_INIZIALE,
+  STATO_MENTALE,
+  stessaPosizione,
+  titoloPosizione,
+  usaCoppia,
+  type Posizione,
+} from '../lib/journal'
+import { segmentiMessaggio, type Segmento } from '../lib/messaggio'
+import type { Mercato, NotaJournal } from '../lib/tipi'
 import SelettoreMese, {
   chiaveMese,
   daChiave,
   etichettaChiave,
 } from '../componenti/SelettoreMese'
-import { formattaData, formattaDataEstesa, oggiIso } from '../lib/formato'
-import { segmentiMessaggio, type Segmento } from '../lib/messaggio'
-import { CANALI, type Canale, type NotaJournal } from '../lib/tipi'
 
 /**
- * Journal emotivo: una chat per canale, divisa per mese.
+ * Journal emotivo, organizzato come un server Discord: un gruppo per mercato
+ * (XAUUSD e Forex) con gli stessi canali, più lo Stato mentale in comune.
  *
- * I canali stanno fissi nella colonna a sinistra e il mese si sceglie da un
- * menu in cima: così cambiando mese si resta nello stesso canale, che è il
- * confronto che serve più spesso. Il mese non è un contenitore da creare:
- * ogni nota ha la sua data e finisce da sola nel posto giusto.
+ * Il mese si sceglie in cima e resta lo stesso cambiando canale. Non è un
+ * contenitore da creare: ogni nota ha la sua data e finisce da sola nel posto
+ * giusto. Sul forex ogni messaggio porta la sua coppia, e un filtro in cima al
+ * canale permette di leggerne una sola.
  */
 
 /** Numero progressivo di un mese, per poterli scorrere con l'aritmetica. */
@@ -38,6 +52,40 @@ function chiaveDaIndice(i: number): string {
 /** Ora del messaggio, senza secondi. */
 function ora(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Menu delle coppie forex, raggruppate per valuta come nella watchlist. */
+function SelettoreCoppia({
+  valore,
+  onChange,
+  vuoto,
+  etichetta,
+}: {
+  valore: string | null
+  onChange: (coppia: string | null) => void
+  /** Testo dell'opzione "nessuna coppia" */
+  vuoto: string
+  etichetta: string
+}) {
+  return (
+    <select
+      value={valore ?? ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      aria-label={etichetta}
+      className="num rounded-md border border-bordo bg-sfondo px-2 py-1 text-sm text-testo"
+    >
+      <option value="">{vuoto}</option>
+      {COPPIE_FOREX.map((g) => (
+        <optgroup key={g.valuta} label={g.valuta}>
+          {g.coppie.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  )
 }
 
 /**
@@ -114,7 +162,12 @@ function Messaggio({
 
   return (
     <article className="group rounded-md px-3 py-2 transition-colors hover:bg-sfondo">
-      <header className="mb-1 flex items-center gap-2">
+      <header className="mb-1 flex flex-wrap items-center gap-2">
+        {nota.coppia && (
+          <span className="num rounded border border-accento/50 bg-accento/10 px-1.5 py-0.5 text-[11px] font-medium text-accento">
+            {nota.coppia}
+          </span>
+        )}
         {/* Data e ora su ogni messaggio: scorrendo non serve risalire al
             separatore di giornata per capire quando è stato scritto. */}
         <span className="num text-[11px] text-testo-soft">
@@ -193,17 +246,43 @@ function Messaggio({
   )
 }
 
+/** Una voce della colonna dei canali. */
+function VoceCanale({
+  etichetta,
+  attiva,
+  onClick,
+}: {
+  etichetta: string
+  attiva: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={attiva}
+      className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition-colors ${
+        attiva ? 'bg-accento/15 text-accento' : 'text-testo-soft hover:bg-superficie hover:text-testo'
+      }`}
+    >
+      <span className="text-testo-soft/60">#</span> {etichetta}
+    </button>
+  )
+}
+
 export default function Journal() {
   const adesso = new Date()
   const meseCorrente = chiaveMese(adesso.getFullYear(), adesso.getMonth())
 
-  const [canale, setCanale] = useState<Canale>('tp')
+  const [posizione, setPosizione] = useState<Posizione>(POSIZIONE_INIZIALE)
   const [mese, setMese] = useState(meseCorrente)
   const [mesiConNote, setMesiConNote] = useState<string[]>([])
+  /** Filtro sulla coppia in lettura; null = tutte */
+  const [coppiaFiltro, setCoppiaFiltro] = useState<string | null>(null)
 
   const [note, setNote] = useState<NotaJournal[]>([])
   const [bozza, setBozza] = useState('')
   const [dataNota, setDataNota] = useState(oggiIso())
+  const [coppiaNota, setCoppiaNota] = useState<string | null>(null)
 
   const [caricamento, setCaricamento] = useState(true)
   const [invio, setInvio] = useState(false)
@@ -216,6 +295,9 @@ export default function Journal() {
   const [anno, numeroMese] = daChiave(mese)
   const da = primoDelMese(anno, numeroMese)
   const a = ultimoDelMese(anno, numeroMese)
+
+  const conCoppia = usaCoppia(posizione)
+  const mancaCoppia = coppiaObbligatoria(posizione) && coppiaNota == null
 
   useEffect(() => {
     caricaMesiConNote()
@@ -230,7 +312,7 @@ export default function Journal() {
       setCaricamento(true)
       setErrore(null)
       try {
-        const n = await caricaNote(canale, da, a)
+        const n = await caricaNote(posizione, da, a, conCoppia ? coppiaFiltro : null)
         if (!annullato) setNote(n)
       } catch (e) {
         if (!annullato) setErrore(e instanceof Error ? e.message : String(e))
@@ -243,12 +325,28 @@ export default function Journal() {
     return () => {
       annullato = true
     }
-  }, [canale, da, a])
+  }, [posizione, da, a, coppiaFiltro, conCoppia])
 
   // Aprendo un canale si finisce in fondo, sull'ultimo messaggio.
   useEffect(() => {
     fondo.current?.scrollIntoView({ block: 'end' })
   }, [note])
+
+  function vaiA(nuova: Posizione) {
+    // Uscendo dal forex la coppia non ha più senso; restando nel forex si
+    // tiene, perché capita di scrivere più messaggi di fila sulla stessa coppia.
+    if (nuova.mercato !== 'forex') {
+      setCoppiaFiltro(null)
+      setCoppiaNota(null)
+    }
+    setPosizione(nuova)
+  }
+
+  function filtraCoppia(coppia: string | null) {
+    setCoppiaFiltro(coppia)
+    // Chi sta leggendo una coppia di solito scrive su quella.
+    if (coppia) setCoppiaNota(coppia)
+  }
 
   /**
    * Cambiando mese la data del nuovo messaggio segue il mese visualizzato:
@@ -262,19 +360,21 @@ export default function Journal() {
 
   async function invia() {
     const testo = bozza.trim()
-    if (testo === '' || invio) return
+    if (testo === '' || invio || mancaCoppia) return
 
     setInvio(true)
     setErrore(null)
     try {
-      const creata = await creaNota(canale, dataNota, testo)
+      const creata = await creaNota(posizione, dataNota, testo, coppiaNota)
       setBozza('')
 
       const meseNota = creata.data.slice(0, 7)
       setMesiConNote((p) => (p.includes(meseNota) ? p : [...p, meseNota]))
 
-      // Se la data scelta cade in un altro mese, si va a vedere lì.
+      // Se il messaggio non rientra in ciò che si sta guardando, ci si sposta
+      // lì invece di farlo "sparire" dopo l'invio.
       if (meseNota !== mese) cambiaMese(meseNota)
+      else if (coppiaFiltro && creata.coppia !== coppiaFiltro) setCoppiaFiltro(creata.coppia)
       else setNote((p) => [...p, creata])
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e))
@@ -306,7 +406,11 @@ export default function Journal() {
     return [...gruppi.entries()]
   }, [note])
 
-  const vocecanale = CANALI.find((c) => c.canale === canale)
+  const titolo = titoloPosizione(posizione)
+  const statoMentale: Posizione = { mercato: null, canale: STATO_MENTALE.canale }
+
+  /** Gruppo mostrato nelle schede su telefono. */
+  const gruppoMobile: Mercato | 'stato-mentale' = posizione.mercato ?? 'stato-mentale'
 
   return (
     <div className="space-y-4">
@@ -323,9 +427,7 @@ export default function Journal() {
             >
               ‹
             </button>
-
             <SelettoreMese mese={mese} mesiConNote={conNote} onChange={cambiaMese} />
-
             <button
               onClick={() => cambiaMese(chiaveDaIndice(indiceMese(mese) + 1))}
               aria-label="Mese successivo"
@@ -335,32 +437,106 @@ export default function Journal() {
             </button>
           </div>
 
-          {/* Su telefono i canali diventano una fila scorrevole. */}
-          <nav className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
-            {CANALI.map((c) => (
-              <button
-                key={c.canale}
-                onClick={() => setCanale(c.canale)}
-                aria-pressed={canale === c.canale}
-                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-sm transition-colors md:w-full ${
-                  canale === c.canale
-                    ? 'bg-accento/15 text-accento'
-                    : 'text-testo-soft hover:bg-superficie hover:text-testo'
-                }`}
-              >
-                <span className="text-testo-soft/60">#</span> {c.etichetta}
-              </button>
+          {/* Desktop: la colonna a gruppi, come le categorie di Discord. */}
+          <nav className="hidden md:block">
+            {MERCATI.map((m) => (
+              <div key={m.mercato}>
+                <p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-testo-soft">
+                  {m.etichetta}
+                </p>
+                {CANALI_MERCATO.map((c) => {
+                  const p: Posizione = { mercato: m.mercato, canale: c.canale }
+                  return (
+                    <VoceCanale
+                      key={c.canale}
+                      etichetta={c.etichetta}
+                      attiva={stessaPosizione(posizione, p)}
+                      onClick={() => vaiA(p)}
+                    />
+                  )
+                })}
+              </div>
             ))}
+
+            <div className="mt-3 border-t border-bordo pt-3">
+              <VoceCanale
+                etichetta={STATO_MENTALE.etichetta}
+                attiva={stessaPosizione(posizione, statoMentale)}
+                onClick={() => vaiA(statoMentale)}
+              />
+            </div>
           </nav>
+
+          {/* Telefono: prima il gruppo, poi i canali del gruppo in una fila. */}
+          <div className="space-y-2 md:hidden">
+            <div className="flex gap-1">
+              {[
+                ...MERCATI.map((m) => ({ chiave: m.mercato, etichetta: m.etichetta })),
+                { chiave: 'stato-mentale' as const, etichetta: STATO_MENTALE.etichetta },
+              ].map((g) => (
+                <button
+                  key={g.chiave}
+                  onClick={() =>
+                    g.chiave === 'stato-mentale'
+                      ? vaiA(statoMentale)
+                      : vaiA({
+                          mercato: g.chiave,
+                          canale: posizione.mercato ? posizione.canale : 'tp',
+                        })
+                  }
+                  aria-pressed={gruppoMobile === g.chiave}
+                  className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                    gruppoMobile === g.chiave
+                      ? 'border-accento bg-accento/15 text-accento'
+                      : 'border-bordo text-testo-soft'
+                  }`}
+                >
+                  {g.etichetta}
+                </button>
+              ))}
+            </div>
+
+            {posizione.mercato && (
+              <div className="flex gap-1 overflow-x-auto pb-1">
+                {CANALI_MERCATO.map((c) => {
+                  const p: Posizione = { mercato: posizione.mercato, canale: c.canale }
+                  const attiva = stessaPosizione(posizione, p)
+                  return (
+                    <button
+                      key={c.canale}
+                      onClick={() => vaiA(p)}
+                      aria-pressed={attiva}
+                      className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors ${
+                        attiva ? 'bg-accento/15 text-accento' : 'text-testo-soft'
+                      }`}
+                    >
+                      <span className="text-testo-soft/60">#</span> {c.etichetta}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </aside>
 
         {/* --- Messaggi ---------------------------------------------------- */}
         <div className="min-w-0 flex-1 rounded-card border border-bordo bg-superficie">
-          <header className="border-b border-bordo px-4 py-2">
-            <h2 className="text-sm font-medium text-testo">
-              <span className="text-testo-soft/60">#</span> {vocecanale?.etichetta}
-            </h2>
-            <p className="text-xs text-testo-soft">{vocecanale?.descrizione}</p>
+          <header className="flex flex-wrap items-center justify-between gap-2 border-b border-bordo px-4 py-2">
+            <div>
+              <h2 className="text-sm font-medium text-testo">
+                <span className="text-testo-soft/60">#</span> {titolo}
+              </h2>
+              <p className="text-xs text-testo-soft">{descrizionePosizione(posizione)}</p>
+            </div>
+
+            {conCoppia && (
+              <SelettoreCoppia
+                valore={coppiaFiltro}
+                onChange={filtraCoppia}
+                vuoto="Tutte le coppie"
+                etichetta="Filtra per coppia"
+              />
+            )}
           </header>
 
           {errore && (
@@ -377,7 +553,9 @@ export default function Journal() {
               <p className="p-4 text-sm text-testo-soft">Caricamento…</p>
             ) : note.length === 0 ? (
               <p className="p-8 text-center text-sm text-testo-soft">
-                Niente in questo canale per {etichettaChiave(mese).toLowerCase()}.
+                Niente in {titolo}
+                {coppiaFiltro && conCoppia ? ` su ${coppiaFiltro}` : ''} per{' '}
+                {etichettaChiave(mese).toLowerCase()}.
               </p>
             ) : (
               perGiorno.map(([giorno, delGiorno]) => (
@@ -414,11 +592,20 @@ export default function Journal() {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void invia()
               }}
               rows={3}
-              placeholder={`Scrivi in #${vocecanale?.etichetta ?? ''}. Incolla i link di TradingView e diventano immagini.`}
+              placeholder={`Scrivi in #${titolo}. Incolla i link di TradingView e diventano immagini.`}
               className="w-full rounded-md border border-bordo bg-sfondo px-3 py-2 text-sm text-testo placeholder:text-testo-soft/60"
             />
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
+              {conCoppia && (
+                <SelettoreCoppia
+                  valore={coppiaNota}
+                  onChange={setCoppiaNota}
+                  vuoto={coppiaObbligatoria(posizione) ? 'Scegli la coppia' : 'Nessuna coppia'}
+                  etichetta="Coppia del messaggio"
+                />
+              )}
+
               <label className="flex items-center gap-2 text-xs text-testo-soft">
                 Data
                 <input
@@ -429,13 +616,19 @@ export default function Journal() {
                 />
               </label>
 
-              <span className="hidden text-[11px] text-testo-soft sm:inline">
-                Ctrl+Invio per inviare
-              </span>
+              {mancaCoppia ? (
+                <span className="text-[11px] text-accento">
+                  Scegli la coppia su cui hai operato.
+                </span>
+              ) : (
+                <span className="hidden text-[11px] text-testo-soft sm:inline">
+                  Ctrl+Invio per inviare
+                </span>
+              )}
 
               <button
                 onClick={() => void invia()}
-                disabled={invio || bozza.trim() === ''}
+                disabled={invio || bozza.trim() === '' || mancaCoppia}
                 className="ml-auto rounded-md bg-accento px-4 py-1.5 text-sm font-medium text-superficie transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 {invio ? 'Invio…' : 'Invia'}

@@ -23,20 +23,11 @@ export const FINESTRE: Finestra[] = ['09:00-12:00', 'fuori finestra']
 export const BIAS: Bias[] = ['rialzista', 'ribassista', 'laterale']
 export const ESITI: Esito[] = ['win', 'loss', 'breakeven', 'annullato']
 
-/** I canali del journal emotivo, nell'ordine in cui compaiono. */
-export type Canale = 'tp' | 'stop' | 'be' | 'miss' | 'stato-mentale'
+/** I canali del journal emotivo. La configurazione sta in lib/journal.ts. */
+export type Canale = 'visione' | 'tp' | 'stop' | 'be' | 'miss' | 'stato-mentale'
 
-export const CANALI: { canale: Canale; etichetta: string; descrizione: string }[] = [
-  { canale: 'tp', etichetta: 'TP', descrizione: 'Le operazioni andate a target' },
-  { canale: 'stop', etichetta: 'Stop', descrizione: 'Le operazioni chiuse in stop' },
-  { canale: 'be', etichetta: 'BE', descrizione: 'Le operazioni chiuse in pari' },
-  { canale: 'miss', etichetta: 'Miss', descrizione: 'I setup visti ma non presi' },
-  {
-    canale: 'stato-mentale',
-    etichetta: 'Stato mentale',
-    descrizione: 'Come stavi, cosa hai provato, cosa hai imparato',
-  },
-]
+/** Il mercato di un messaggio del journal. Lo Stato mentale non ne ha. */
+export type Mercato = 'xauusd' | 'forex'
 
 /** I 5 step della checklist, in ordine, con l'etichetta mostrata nel form. */
 export const STEP_CHECKLIST = [
@@ -156,7 +147,11 @@ export type NotaJournal = {
   id: string
   user_id: string
   data: string
+  /** null solo per lo Stato mentale, che è in comune fra i mercati */
+  mercato: Mercato | null
   canale: Canale
+  /** Coppia forex, es. 'EURUSD'. null sull'oro e sullo Stato mentale */
+  coppia: string | null
   testo: string
   created_at: string
   updated_at: string
@@ -247,6 +242,7 @@ export type Database = {
       numero_fr: NumeroFR
       esito_execution: Esito
       canale_journal: Canale
+      mercato_journal: Mercato
     }
     CompositeTypes: { [_ in never]: never }
   }
