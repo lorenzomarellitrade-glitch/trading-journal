@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aggiungiGiorni,
   etichettaMese,
   fineSettimana,
   grigliaMese,
@@ -28,6 +29,26 @@ describe('inizioSettimana', () => {
   it('attraversa il cambio d\'anno', () => {
     // venerdì 1 gennaio 2027 → lunedì 28 dicembre 2026
     expect(inizioSettimana('2027-01-01')).toBe('2026-12-28')
+  })
+})
+
+describe('aggiungiGiorni', () => {
+  it('va avanti di una settimana', () => {
+    expect(aggiungiGiorni('2026-09-28', 7)).toBe('2026-10-05')
+  })
+
+  it('torna indietro attraversando il cambio di mese', () => {
+    expect(aggiungiGiorni('2026-10-05', -7)).toBe('2026-09-28')
+  })
+
+  it('attraversa il cambio d\'anno', () => {
+    expect(aggiungiGiorni('2026-12-28', 7)).toBe('2027-01-04')
+  })
+
+  it('non slitta nel giorno del cambio dell\'ora legale', () => {
+    // In Italia l'ora solare torna l'ultima domenica di ottobre.
+    expect(aggiungiGiorni('2026-10-24', 1)).toBe('2026-10-25')
+    expect(aggiungiGiorni('2026-10-25', 1)).toBe('2026-10-26')
   })
 })
 

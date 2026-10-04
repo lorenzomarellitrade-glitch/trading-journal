@@ -16,6 +16,9 @@ const ImpostazioniPagina = lazy(() => import('./pagine/Impostazioni'))
 const FormTrade = lazy(() => import('./pagine/FormTrade'))
 const ResocontoTrade = lazy(() => import('./pagine/ResocontoTrade'))
 const Journal = lazy(() => import('./pagine/Journal'))
+const Diario = lazy(() => import('./pagine/Diario'))
+const PaginaDiario = lazy(() => import('./pagine/PaginaDiario'))
+const SettimanaDiario = lazy(() => import('./pagine/SettimanaDiario'))
 
 function Attesa() {
   return <p className="text-sm text-testo-soft">Caricamento…</p>
@@ -54,6 +57,11 @@ function AppAutenticata() {
             <Route path="/trade/:id" element={<ResocontoTrade />} />
             <Route path="/statistiche" element={<Statistiche />} />
             <Route path="/journal" element={<Journal />} />
+            {/* Le rotte statiche del diario vanno prima di quella con parametro */}
+            <Route path="/diario" element={<Diario />} />
+            <Route path="/diario/settimana" element={<SettimanaDiario />} />
+            <Route path="/diario/nuova" element={<PaginaDiario />} />
+            <Route path="/diario/:id" element={<PaginaDiario />} />
             <Route path="/impostazioni" element={<ImpostazioniPagina />} />
             <Route path="*" element={<Navigate to="/calendario" replace />} />
           </Routes>

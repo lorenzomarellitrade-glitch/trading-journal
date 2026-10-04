@@ -10,6 +10,11 @@ const VOCI = [
     etichetta: 'Journal',
     icona: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z',
   },
+  {
+    a: '/diario',
+    etichetta: 'Diario',
+    icona: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z',
+  },
   { a: '/impostazioni', etichetta: 'Impostazioni', icona: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z' },
 ] as const
 
@@ -82,13 +87,15 @@ export default function Navigazione() {
               key={v.a}
               to={v.a}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors ${
+                // Sei voci su uno schermo stretto: min-w-0 e truncate impediscono
+                // alle etichette lunghe di allargare la colonna e far sbordare la barra.
+                `flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-2 text-[10px] transition-colors ${
                   isActive ? 'text-accento' : 'text-testo-soft'
                 }`
               }
             >
               <Icona d={v.icona} />
-              {v.etichetta}
+              <span className="w-full truncate text-center">{v.etichetta}</span>
             </NavLink>
           ))}
         </div>

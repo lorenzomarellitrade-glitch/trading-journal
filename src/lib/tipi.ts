@@ -157,6 +157,71 @@ export type NotaJournal = {
   updated_at: string
 }
 
+/** Risposta a "Ho rispettato il piano?" */
+export type PianoRispettato = 'si' | 'no' | 'in-parte'
+
+/** Una pagina del diario: una seduta, con il piano prima e la verifica dopo. */
+export type PaginaDiario = {
+  id: string
+  user_id: string
+  data: string
+  strumento: string | null
+  time_frame: string | null
+
+  // PRIMA · dichiaro
+  cosa_vedo: string | null
+  /** Link ai grafici visti prima di entrare, uno per riga */
+  grafici_prima: string | null
+  ingresso: string | null
+  stop: string | null
+  uscita: string | null
+  rischio: string | null
+  cambierebbe_idea: string | null
+  notizie_attese: string | null
+
+  /** Quando è stato bloccato il piano; null finché la pagina è una bozza */
+  piano_bloccato_at: string | null
+
+  // DOPO · verifico
+  cosa_successo: string | null
+  risultato: string | null
+  piano_rispettato: PianoRispettato | null
+  cambiamenti: string | null
+  riflesso_incassato_presto: boolean
+  riflesso_tenuto_perdita: boolean
+  riflesso_rincorso_prezzo: boolean
+  riflesso_seguito_regola: boolean
+  prossima_volta: string | null
+
+  created_at: string
+  updated_at: string
+}
+
+export type GiornoFeriale = 'lun' | 'mar' | 'mer' | 'gio' | 'ven'
+
+/** Una riga della tabella del riepilogo settimanale. */
+export type RigaSettimana = {
+  operazioni: string
+  piano: PianoRispettato | ''
+  risultato: string
+  nota: string
+}
+
+export type SettimanaDiario = {
+  id: string
+  user_id: string
+  /** Il lunedì della settimana, 'YYYY-MM-DD' */
+  settimana_dal: string
+  strumenti: string | null
+  giorni: Partial<Record<GiornoFeriale, RigaSettimana>>
+  fatto_meglio: string | null
+  errore_ripetuto: string | null
+  riflesso: string | null
+  regola: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Impostazioni = {
   user_id: string
   limite_giornaliero_percent: number
@@ -228,6 +293,18 @@ export type Database = {
         Update: Partial<NotaJournal>
         Relationships: []
       }
+      diario_pagine: {
+        Row: PaginaDiario
+        Insert: Partial<PaginaDiario>
+        Update: Partial<PaginaDiario>
+        Relationships: []
+      }
+      diario_settimane: {
+        Row: SettimanaDiario
+        Insert: Insertabile<SettimanaDiario, 'settimana_dal'>
+        Update: Partial<SettimanaDiario>
+        Relationships: []
+      }
     }
     // Insiemi vuoti nella forma canonica: `{ [_ in never]: never }` non ha
     // index signature, quindi `keyof` è `never`. Con `Record<string, never>`
@@ -243,6 +320,7 @@ export type Database = {
       esito_execution: Esito
       canale_journal: Canale
       mercato_journal: Mercato
+      piano_rispettato: PianoRispettato
     }
     CompositeTypes: { [_ in never]: never }
   }

@@ -5,6 +5,8 @@ import type {
   Execution,
   Impostazioni,
   NotaJournal,
+  PaginaDiario,
+  SettimanaDiario,
   Trade,
   TradeCompleto,
 } from './tipi'
@@ -242,6 +244,88 @@ export async function aggiornaNota(id: string, testo: string): Promise<void> {
 export async function eliminaNota(id: string): Promise<void> {
   const { error } = await supabase.from('note_journal').delete().eq('id', id)
   if (error) throw new Error(`Eliminazione nota fallita: ${error.message}`)
+}
+
+// ---------------------------------------------------------------------------
+// Diario di trading
+// ---------------------------------------------------------------------------
+
+/** Le pagine del diario in un intervallo di date, dalla più recente. */
+export async function caricaPagineDiario(da: string, a: string): Promise<PaginaDiario[]> {
+  const { data, error } = await supabase
+    .from('diario_pagine')
+    .select('*')
+    .gte('data', da)
+    .lte('data', a)
+    .order('data', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(`Caricamento diario fallito: ${error.message}`)
+  return data ?? []
+}
+
+export async function caricaPaginaDiario(id: string): Promise<PaginaDiario | null> {
+  const { data, error } = await supabase.from('diario_pagine').select('*').eq('id', id).maybeSingle()
+  if (error) throw new Error(`Caricamento pagina fallito: ${error.message}`)
+  return data
+}
+
+export async function creaPaginaDiario(campi: Partial<PaginaDiario>): Promise<PaginaDiario> {
+  const { data, error } = await supabase.from('diario_pagine').insert(campi).select('*').single()
+  if (error) throw new Error(`Salvataggio pagina fallito: ${error.message}`)
+  return data
+}
+
+/**
+ * Aggiorna una pagina. Se il piano è già bloccato e si prova a toccarne la
+ * parte PRIMA, è il database a rifiutare: il messaggio d'errore lo spiega.
+ */
+export async function aggiornaPaginaDiario(
+  id: string,
+  campi: Partial<PaginaDiario>,
+): Promise<PaginaDiario> {
+  const { data, error } = await supabase
+    .from('diario_pagine')
+    .update(campi)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(`Salvataggio pagina fallito: ${error.message}`)
+  return data
+}
+
+export async function eliminaPaginaDiario(id: string): Promise<void> {
+  const { error } = await supabase.from('diario_pagine').delete().eq('id', id)
+  if (error) throw new Error(`Eliminazione pagina fallita: ${error.message}`)
+}
+
+/** Il riepilogo della settimana che comincia il lunedì indicato, se esiste. */
+export async function caricaSettimanaDiario(lunedi: string): Promise<SettimanaDiario | null> {
+  const { data, error } = await supabase
+    .from('diario_settimane')
+    .select('*')
+    .eq('settimana_dal', lunedi)
+    .maybeSingle()
+
+  if (error) throw new Error(`Caricamento settimana fallito: ${error.message}`)
+  return data
+}
+
+/** Crea o aggiorna il riepilogo della settimana: ce n'è uno solo per settimana. */
+export async function salvaSettimanaDiario(
+  campi: Partial<SettimanaDiario> & { settimana_dal: string },
+): Promise<SettimanaDiario> {
+  const { data: utente } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('diario_settimane')
+    .upsert({ ...campi, user_id: utente.user!.id }, { onConflict: 'user_id,settimana_dal' })
+    .select('*')
+    .single()
+
+  if (error) throw new Error(`Salvataggio settimana fallito: ${error.message}`)
+  return data
 }
 
 /** Elimina un trade. Le executions spariscono da sole per via del cascade. */

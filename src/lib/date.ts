@@ -72,6 +72,13 @@ export function inizioSettimana(iso: string): string {
   return isoDaData(d)
 }
 
+/** La data spostata di n giorni, avanti o indietro, senza sorprese di fuso. */
+export function aggiungiGiorni(iso: string, n: number): string {
+  const d = dataDaIso(iso)
+  d.setDate(d.getDate() + n)
+  return isoDaData(d)
+}
+
 /** Domenica della settimana che contiene la data indicata. */
 export function fineSettimana(iso: string): string {
   const d = dataDaIso(inizioSettimana(iso))
