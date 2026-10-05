@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { caricaSettimanaDiario, salvaSettimanaDiario } from '../lib/dati'
 import { aggiungiGiorni, fineSettimana, inizioSettimana } from '../lib/date'
 import { GIORNI_FERIALI, RIGA_VUOTA, RISPOSTE_PIANO } from '../lib/diario'
-import { formattaData, oggiIso } from '../lib/formato'
+import { formattaData, oggiIso, testoInDigitazione } from '../lib/formato'
 import type { GiornoFeriale, PianoRispettato, RigaSettimana, SettimanaDiario as Settimana } from '../lib/tipi'
 import SchedeDiario from '../componenti/SchedeDiario'
 
@@ -34,9 +34,7 @@ const CLASSI_CAMPO =
   'w-full rounded-md border border-bordo bg-sfondo px-2.5 py-2 text-sm text-testo ' +
   'placeholder:text-testo-soft/60'
 
-function testoONull(v: string): string | null {
-  return v.trim() === '' ? null : v
-}
+const testoONull = testoInDigitazione
 
 function Domanda({ etichetta, aiuto, children }: { etichetta: string; aiuto?: string; children: ReactNode }) {
   return (

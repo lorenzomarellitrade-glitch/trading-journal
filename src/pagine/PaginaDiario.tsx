@@ -15,7 +15,7 @@ import {
   TIME_FRAME_COMUNI,
   type CampoRiflesso,
 } from '../lib/diario'
-import { formattaDataEstesa, oggiIso } from '../lib/formato'
+import { formattaDataEstesa, oggiIso, testoInDigitazione } from '../lib/formato'
 import { COPPIE_FOREX } from '../lib/journal'
 import { segmentiMessaggio, type Segmento } from '../lib/messaggio'
 import type { PaginaDiario as Pagina } from '../lib/tipi'
@@ -34,9 +34,7 @@ const CAMPI_DOPO_TESTO = ['cosa_successo', 'risultato', 'cambiamenti', 'prossima
 
 type Bozza = Partial<Pagina>
 
-function testoONull(v: string): string | null {
-  return v.trim() === '' ? null : v
-}
+const testoONull = testoInDigitazione
 
 /** Estrae da un oggetto solo i campi indicati. */
 function soloCampi<K extends keyof Pagina>(bozza: Bozza, campi: readonly K[]): Pick<Bozza, K> {

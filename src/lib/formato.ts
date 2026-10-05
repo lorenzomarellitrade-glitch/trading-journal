@@ -79,6 +79,25 @@ export function numeroDaInput(v: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/**
+ * Il valore di un campo di testo **mentre lo si scrive**.
+ *
+ * Un campo vuoto o fatto solo di spazi diventa null, ma per il resto il testo
+ * resta esattamente com'è. Non va tolto lo spazio finale: in un campo
+ * controllato verrebbe cancellato a ogni tasto, e diventerebbe impossibile
+ * separare una parola dalla successiva.
+ */
+export function testoInDigitazione(v: string): string | null {
+  return v.trim() === '' ? null : v
+}
+
+/** Il valore di un campo di testo **al salvataggio**: senza spazi agli estremi. */
+export function testoPulito(v: string | null | undefined): string | null {
+  if (v == null) return null
+  const t = v.trim()
+  return t === '' ? null : t
+}
+
 /** Numero → testo per un input controllato. `null` diventa stringa vuota. */
 export function inputDaNumero(n: number | null | undefined): string {
   return n == null || !Number.isFinite(n) ? '' : String(n)

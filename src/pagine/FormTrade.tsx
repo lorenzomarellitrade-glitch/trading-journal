@@ -10,7 +10,14 @@ import {
   salvaTrade,
   type BozzaExecution,
 } from '../lib/dati'
-import { inputDaNumero, numeroDaInput, oggiIso, oraBreve } from '../lib/formato'
+import {
+  inputDaNumero,
+  numeroDaInput,
+  oggiIso,
+  oraBreve,
+  testoInDigitazione,
+  testoPulito,
+} from '../lib/formato'
 import {
   BIAS,
   CAMPI_LINK,
@@ -79,10 +86,18 @@ function tradeVuoto(data: string): Partial<Trade> {
   }
 }
 
-/** Testo vuoto → null, così nel database non finiscono stringhe vuote. */
-function testoONull(v: string): string | null {
-  const t = v.trim()
-  return t === '' ? null : t
+/**
+ * Mentre si scrive il testo resta com'è (vedi testoInDigitazione): gli spazi
+ * agli estremi si tolgono solo qui, al salvataggio.
+ */
+function conTestiPuliti(t: Partial<Trade>): Partial<Trade> {
+  const pulito: Partial<Trade> = {
+    ...t,
+    nota_uscita: testoPulito(t.nota_uscita),
+    emozione: testoPulito(t.emozione),
+  }
+  for (const l of CAMPI_LINK) pulito[l.campo] = testoPulito(t[l.campo])
+  return pulito
 }
 
 export default function FormTrade() {
@@ -221,7 +236,7 @@ export default function FormTrade() {
     setSalvataggio(true)
     setErrore(null)
     try {
-      await salvaTrade(trade, executionsDaSalvare, id)
+      await salvaTrade(conTestiPuliti(trade), executionsDaSalvare, id)
 
       if (eNuovo) {
         // Stessa data, tutto il resto azzerato: di solito i trade della
@@ -300,7 +315,7 @@ export default function FormTrade() {
               <Input
                 type="time"
                 value={oraBreve(trade.ora_entrata)}
-                onChange={(e) => aggiorna({ ora_entrata: testoONull(e.target.value) })}
+                onChange={(e) => aggiorna({ ora_entrata: testoInDigitazione(e.target.value) })}
               />
             </Campo>
           </div>
@@ -485,7 +500,7 @@ export default function FormTrade() {
                           type="url"
                           placeholder="https://www.tradingview.com/x/…"
                           value={valore}
-                          onChange={(e) => aggiornaCampo(l.campo, testoONull(e.target.value))}
+                          onChange={(e) => aggiornaCampo(l.campo, testoInDigitazione(e.target.value))}
                         />
                       </Campo>
                     </div>
@@ -520,14 +535,14 @@ export default function FormTrade() {
               rows={3}
               placeholder="Perché sono uscito lì? Era il piano?"
               value={trade.nota_uscita ?? ''}
-              onChange={(e) => aggiorna({ nota_uscita: testoONull(e.target.value) })}
+              onChange={(e) => aggiorna({ nota_uscita: testoInDigitazione(e.target.value) })}
               className="mt-0.5 w-full rounded-md border border-bordo bg-sfondo px-2.5 py-2 text-sm text-testo placeholder:text-testo-soft/60"
             />
           </Campo>
           <Campo etichetta="Emozione" suggerimento="Una parola">
             <Input
               value={trade.emozione ?? ''}
-              onChange={(e) => aggiorna({ emozione: testoONull(e.target.value) })}
+              onChange={(e) => aggiorna({ emozione: testoInDigitazione(e.target.value) })}
               placeholder="calmo, ansioso, euforico…"
             />
           </Campo>
