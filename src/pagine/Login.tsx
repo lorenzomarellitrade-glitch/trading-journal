@@ -11,6 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [errore, setErrore] = useState<string | null>(null)
   const [inCorso, setInCorso] = useState(false)
+  const [mostraPassword, setMostraPassword] = useState(false)
 
   async function invia(e: FormEvent) {
     e.preventDefault()
@@ -35,7 +36,7 @@ export default function Login() {
 
         <form
           onSubmit={invia}
-          className="rounded-card border border-bordo bg-superficie p-6"
+          className="riquadro p-6"
           noValidate
         >
           <label className="block">
@@ -45,22 +46,38 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
+              autoFocus
               required
               className="mt-1 w-full rounded-md border border-bordo bg-sfondo px-3 py-2 text-testo placeholder:text-testo-soft/60"
             />
           </label>
 
-          <label className="mt-4 block">
-            <span className="text-sm text-testo-soft">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="mt-1 w-full rounded-md border border-bordo bg-sfondo px-3 py-2 text-testo"
-            />
-          </label>
+          <div className="mt-4">
+            <label htmlFor="password" className="text-sm text-testo-soft">
+              Password
+            </label>
+            <div className="relative mt-1">
+              <input
+                id="password"
+                type={mostraPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className="w-full rounded-md border border-bordo bg-sfondo py-2 pl-3 pr-20 text-testo"
+              />
+              {/* Un vero pulsante, non un'icona cliccabile: si raggiunge con Tab. */}
+              <button
+                type="button"
+                onClick={() => setMostraPassword((v) => !v)}
+                aria-label={mostraPassword ? 'Nascondi la password' : 'Mostra la password'}
+                aria-pressed={mostraPassword}
+                className="absolute inset-y-1 right-1 rounded px-2 text-xs text-testo-soft transition-colors hover:text-testo"
+              >
+                {mostraPassword ? 'Nascondi' : 'Mostra'}
+              </button>
+            </div>
+          </div>
 
           {errore && (
             <p

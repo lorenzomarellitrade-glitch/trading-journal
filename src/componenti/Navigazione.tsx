@@ -1,22 +1,27 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import SelettoreTema from './SelettoreTema'
 
+/**
+ * Ordine della giornata: la Home, il calendario, poi gli strumenti di
+ * scrittura vicini (trade, diario, journal), l'analisi verso la fine e le
+ * impostazioni per ultime.
+ */
 const VOCI = [
   { a: '/home', etichetta: 'Home', icona: 'M3 10.5 12 3l9 7.5M5 9v11h5v-6h4v6h5V9' },
   { a: '/calendario', etichetta: 'Calendario', icona: 'M7 3v2M17 3v2M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z' },
   { a: '/trade', etichetta: 'Trade', icona: 'M4 6h16M4 12h16M4 18h10' },
-  { a: '/statistiche', etichetta: 'Statistiche', icona: 'M4 19V10M10 19V5M16 19v-6M22 19H2' },
-  {
-    a: '/journal',
-    etichetta: 'Journal',
-    icona: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z',
-  },
   {
     a: '/diario',
     etichetta: 'Diario',
     icona: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z',
   },
+  {
+    a: '/journal',
+    etichetta: 'Journal',
+    icona: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z',
+  },
+  { a: '/statistiche', etichetta: 'Statistiche', icona: 'M4 19V10M10 19V5M16 19v-6M22 19H2' },
   { a: '/impostazioni', etichetta: 'Impostazioni', icona: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z' },
 ] as const
 
@@ -70,10 +75,20 @@ export default function Navigazione() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <SelettoreTema />
-            <span className="text-xs text-testo-soft">{user?.email}</span>
+            {/* Inserire un trade da qualsiasi pagina, senza passare dalla lista. */}
+            <Link
+              to="/trade/nuovo"
+              className="rounded-md bg-accento px-3 py-1.5 text-sm font-medium text-superficie transition-opacity hover:opacity-90"
+            >
+              + Trade
+            </Link>
+            {/* Sotto i 1280 px la barra non ha spazio: il tema resta in Impostazioni. */}
+            <div className="hidden xl:block">
+              <SelettoreTema />
+            </div>
             <button
               onClick={esci}
+              title={user?.email ? 'Connesso come ' + user.email : undefined}
               className="rounded-md border border-bordo px-3 py-1.5 text-sm text-testo-soft transition-colors hover:text-testo"
             >
               Esci

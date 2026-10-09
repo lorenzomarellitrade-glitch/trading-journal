@@ -163,7 +163,7 @@ export default function ImpostazioniPagina() {
       <h1 className="text-xl font-medium tracking-tight">Impostazioni</h1>
 
       {/* --- Tema ------------------------------------------------------ */}
-      <section className="rounded-card border border-bordo bg-superficie p-5">
+      <section className="riquadro p-5">
         <h2 className="text-sm font-medium text-testo">Tema</h2>
         <p className="mt-1 text-xs text-testo-soft">
           In tutti e tre gli utili sono più chiari delle perdite. La scelta resta salvata in
@@ -175,7 +175,7 @@ export default function ImpostazioniPagina() {
       </section>
 
       {/* --- Account --------------------------------------------------- */}
-      <section className="rounded-card border border-bordo bg-superficie p-5">
+      <section className="riquadro p-5">
         <h2 className="text-sm font-medium text-testo">Account</h2>
         <p className="mt-1 text-xs text-testo-soft">
           I saldi iniziali sono la base per il calcolo di P&amp;L% e rischio%. Target e drawdown
@@ -280,7 +280,7 @@ export default function ImpostazioniPagina() {
       </section>
 
       {/* --- Limiti di rischio ----------------------------------------- */}
-      <section className="rounded-card border border-bordo bg-superficie p-5">
+      <section className="riquadro p-5">
         <h2 className="text-sm font-medium text-testo">Limiti di rischio</h2>
         <p className="mt-1 text-xs text-testo-soft">
           Usati dalla barra rischio del calendario e dall'avviso nel form trade.

@@ -94,6 +94,6 @@ Data: 2026-10-10. Legenda: **[F]** fatto verificato sulla fonte, **[S]** fonte s
 | # | Proposta | Criterio | Stato |
 |---|---|---|---|
 | 1 | Navigazione: **Home · Calendario · Trade · Diario · Journal · Statistiche · Impostazioni**. Gli strumenti di scrittura stanno vicini, l'analisi verso la fine, le impostazioni per ultime | Ordine della giornata | Applicata |
-| 2 | Pulsante **"+ Trade"** sempre visibile nella barra in alto (desktop) | Inserire un trade da qualsiasi pagina | Applicata |
+| 2 | Pulsante **"+ Trade"** sempre visibile nella barra in alto (desktop). Per fargli spazio l'email diventa il suggerimento del pulsante Esci, e il selettore del tema in alto compare da 1280 px in su (sotto resta in Impostazioni) | Inserire un trade da qualsiasi pagina | Applicata |
 | 3 | Login: `autocomplete` corretti, mostra/nascondi password, rilievo | Accesso più rapido con il gestore di password | Applicata |
 | 4 | Impostazioni: card con rilievo, conferma di salvataggio visibile accanto al pulsante | Salvataggio più chiaro | Applicata |
