@@ -13,12 +13,13 @@ Il journal misura la **compliance al processo**, non solo il P&L. Le domande a c
 Conseguenze pratiche per chi modifica il codice:
 - Ogni nuova schermata o metrica di risultato deve convivere con quelle di processo, mai sostituirle. Il punteggio **Processo** viene prima del punteggio **Risultati**.
 - Sotto i 5 trade (`SOGLIA_CAMPIONE`) un dato non è leggibile: va mostrato con l'avviso di campione scarso, non nascosto né celebrato.
-- Colori a bassa carica emotiva: oliva per gli utili, mattone per le perdite, terra per l'interattivo. Niente verde/rosso accesi, niente toni da festa o da allarme oltre a quelli già previsti.
+- Tre temi scuri selezionabili: **B · Grafite**, **C · Freddo** (predefinito) e **D · Notte**, con i colori di `riferimenti/mockup-home-varianti.html`. In ogni tema il profitto è più chiaro della perdita (si distinguono per luminosità, non solo per tinta), ogni importo ha il segno + / −, e tutti i testi colorati restano almeno a 4.5:1 sulle card. Colori a bassa carica emotiva: niente verde/rosso accesi, niente toni da festa o da allarme oltre a quelli già previsti.
+- I colori si usano **solo tramite i token** (classi Tailwind o variabili CSS): mai codici colore scritti a mano nei componenti.
 
 ## Stack
 
 - React 19 + Vite + TypeScript (strict, `noUnusedLocals`/`noUnusedParameters`)
-- Tailwind CSS v4: palette come token in `src/index.css` (`bg-sfondo`, `bg-superficie`, `text-testo`, `text-testo-soft`, `text-positivo`, `text-negativo`, `text-accento`, `border-bordo`, `rounded-card`). Gli stessi valori, per Recharts e gli stili inline, stanno in `src/lib/colori.ts`: se cambi la palette, cambia entrambi.
+- Tailwind CSS v4: palette come token in `src/index.css` (`bg-sfondo`, `bg-superficie`, `text-testo`, `text-testo-soft`, `text-positivo`, `text-negativo`, `text-accento`, `border-bordo`, `rounded-card`), ridefiniti per tema con `data-theme` su `<html>`. Unica fonte dei colori: `src/lib/colori.ts` non ha codici colore, li legge dal CSS (Recharts tramite `useColori`). Se cambi lo sfondo di un tema, aggiorna anche lo script in `index.html` (un test lo controlla).
 - Supabase (Postgres + Auth) con Row Level Security su tutte le tabelle
 - Recharts per i grafici (caricato solo nelle pagine lazy: non importarlo nella schermata iniziale)
 - Vitest per i test
@@ -40,6 +41,7 @@ Conseguenze pratiche per chi modifica il codice:
 - **Non toccare `.env`**: né leggerlo, né modificarlo, né crearlo. L'unico file d'ambiente versionato è `.env.example`, e resta senza valori.
 - **Mai scrivere chiavi nei file**: niente URL di progetto, chiavi `anon` o `service_role`, token o password, né nel codice né nei test né nei commenti né nei messaggi di commit.
 - **Niente `npm run deploy` né `git push` senza l'ok esplicito di Lore**, ogni volta. Un ok dato per un deploy non vale per il successivo.
+- **Piano e tempi**: per ogni lavoro con più di 2-3 passi, prima di iniziare scrivi un elenco di passi numerati e una stima approssimativa del tempo totale (es. "circa 5-8 minuti"), dichiarando che è una stima. Mentre lavori scrivi brevemente a che passo sei ("passo 3 di 7") e avvisa Lore se la stima cambia in modo importante. A fine lavoro indica il tempo reale impiegato, misurato con l'orologio di sistema (`date`) all'inizio e alla fine, non stimato.
 - Codice, commenti, nomi di variabili e testi dell'interfaccia in italiano, nello stile dei file esistenti (commenti che spiegano il *perché*).
 - Se cambi `supabase/schema.sql`, aggiungi la migrazione in `supabase/migrazioni/AAAA-MM-GG_nome.sql` e aggiorna a mano `src/lib/tipi.ts`.
 
@@ -99,7 +101,8 @@ src/lib/
   tradingview.ts             Da link snapshot TradingView all'immagine PNG
   journal.ts, diario.ts      Struttura del journal emotivo e del diario
   date.ts, formato.ts        Date ISO e formattazione it-IT
-  colori.ts                  Palette per JS (specchio dei token CSS)
+  temi.ts                    Elenco dei temi, predefinito, lettura/salvataggio della scelta
+  colori.ts                  Token per JS: var(--color-…) per SVG, valori risolti per Recharts
   csv.ts, messaggio.ts       Export CSV; testo delle note con link e immagini
   ritentativo.ts             Ritentativo sull'errore "JWT issued at future"
   fixture.ts                 Dati finti per i test

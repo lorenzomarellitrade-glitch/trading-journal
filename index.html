@@ -1,11 +1,27 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" data-theme="freddo">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#17150F" />
+    <meta name="theme-color" content="#090b0f" />
     <meta name="color-scheme" content="dark" />
     <title>Trading Journal</title>
+    <script>
+      // Applica il tema salvato prima del primo disegno, così la pagina non
+      // lampeggia nel tema predefinito. Elenco, chiave e sfondi devono
+      // restare allineati a src/lib/temi.ts e src/index.css (c'è un test).
+      ;(function () {
+        var sfondi = { grafite: '#0b0b0c', freddo: '#090b0f', notte: '#010101' }
+        var tema = 'freddo'
+        try {
+          var salvato = window.localStorage.getItem('tema')
+          if (salvato && Object.prototype.hasOwnProperty.call(sfondi, salvato)) tema = salvato
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', tema)
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', sfondi[tema])
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

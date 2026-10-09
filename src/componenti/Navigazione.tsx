@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import SelettoreTema from './SelettoreTema'
 
 const VOCI = [
   { a: '/calendario', etichetta: 'Calendario', icona: 'M7 3v2M17 3v2M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z' },
@@ -68,6 +69,7 @@ export default function Navigazione() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
+            <SelettoreTema />
             <span className="text-xs text-testo-soft">{user?.email}</span>
             <button
               onClick={esci}

@@ -30,7 +30,7 @@ import {
   oraBreve,
   VUOTO,
 } from '../lib/formato'
-import { RGB } from '../lib/colori'
+import { velato } from '../lib/colori'
 import { statoConti } from '../lib/obiettivi'
 import type { Account, TradeCompleto } from '../lib/tipi'
 import BarraRischio from '../componenti/BarraRischio'
@@ -40,13 +40,16 @@ import SelettoreAccount, {
   type SelezioneAccount,
 } from '../componenti/SelettoreAccount'
 
-/** Opacità massima di una casella: oltre si perde la leggibilità del testo. */
-const OPACITA_MAX = 0.55
+/**
+ * Opacità massima della tinta di una casella. Il testo della casella ha lo
+ * stesso colore della tinta: a 0,20 l'importo, il giorno e il numero di trade
+ * restano almeno a 4.5:1 in tutti e tre i temi; oltre scendono sotto la soglia.
+ */
+const OPACITA_MAX = 0.2
 
 function sfondoGiorno(pnl: number | null, massimo: number): string | undefined {
   if (pnl == null || pnl === 0) return undefined
-  const alpha = intensita(pnl, massimo) * OPACITA_MAX
-  return `rgba(${pnl > 0 ? RGB.positivo : RGB.negativo}, ${alpha})`
+  return velato(pnl > 0 ? 'positivo' : 'negativo', intensita(pnl, massimo) * OPACITA_MAX)
 }
 
 function classeSegno(n: number | null): string {
@@ -466,8 +469,8 @@ function SettimanaRiga({
 
 function Legenda() {
   const voci = [
-    { colore: `rgba(${RGB.positivo}, 0.55)`, testo: 'Giornata in utile' },
-    { colore: `rgba(${RGB.negativo}, 0.55)`, testo: 'Giornata in perdita' },
+    { colore: velato('positivo', OPACITA_MAX), testo: 'Giornata in utile' },
+    { colore: velato('negativo', OPACITA_MAX), testo: 'Giornata in perdita' },
     { colore: 'transparent', testo: 'Nessun trade' },
   ]
 

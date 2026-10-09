@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react'
-import { COLORI } from '../lib/colori'
+import { TOKEN } from '../lib/colori'
 
 /**
  * Anello di avanzamento con un valore al centro.
+ *
+ * I colori passano da `style` e non dagli attributi SVG: `colore` è di norma
+ * un riferimento a un token (`var(--color-…)`), che negli attributi di
+ * presentazione non tutti i browser risolvono.
  *
  * Usato sia per i punteggi delle statistiche sia per gli obiettivi dei conti:
  * un solo disegno, così le due schermate restano coerenti.
@@ -41,7 +45,7 @@ export default function Anello({
           cy="50"
           r={RAGGIO}
           fill="none"
-          stroke={COLORI.bordo}
+          style={{ stroke: TOKEN.bordo }}
           strokeWidth={misura.spessore}
         />
         {frazione > 0 && (
@@ -50,7 +54,7 @@ export default function Anello({
             cy="50"
             r={RAGGIO}
             fill="none"
-            stroke={colore}
+            style={{ stroke: colore }}
             strokeWidth={misura.spessore}
             strokeLinecap="round"
             strokeDasharray={`${frazione * CIRCONFERENZA} ${CIRCONFERENZA}`}
