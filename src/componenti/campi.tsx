@@ -164,6 +164,7 @@ export function Kpi({
   classe = 'text-testo',
   nota,
   icona,
+  grafico,
 }: {
   etichetta: string
   /** Di norma un testo; un nodo quando il valore è composto, es. vincita / perdita */
@@ -171,15 +172,18 @@ export function Kpi({
   classe?: string
   nota?: string
   icona?: string
+  /** Micro-grafico sotto il valore, es. l'andamento trade dopo trade */
+  grafico?: ReactNode
 }) {
   return (
-    <div className="rounded-card border border-bordo bg-superficie px-4 py-3">
+    <div className="riquadro px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
         {icona && <Icona percorso={icona} />}
       </div>
-      <dd className={`num mt-0.5 text-lg ${classe}`}>{valore}</dd>
+      <dd className={`num mt-0.5 text-xl tracking-tight ${classe}`}>{valore}</dd>
       {nota && <p className="num text-[11px] text-testo-soft">{nota}</p>}
+      {grafico && <div className="mt-2">{grafico}</div>}
     </div>
   )
 }

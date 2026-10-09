@@ -3,6 +3,7 @@ import { SOGLIA_CAMPIONE } from '../lib/statistiche'
 import { TOKEN } from '../lib/colori'
 import { VUOTO } from '../lib/formato'
 import Anello from './Anello'
+import { useConteggio } from './useAnimazione'
 
 /**
  * Punteggio da 0 a 100 mostrato come anello.
@@ -28,13 +29,14 @@ export default function Punteggio({
 }) {
   const { valore, numeroTrade, campioneScarso } = punteggio
   const tinta = valore == null ? TOKEN.bordo : colore(valore)
+  const contato = useConteggio(valore)
 
   return (
-    <section className="flex items-center gap-4 rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro flex items-center gap-4 p-4">
       <div className="shrink-0">
         <Anello quota={(valore ?? 0) / 100} colore={tinta} dimensione="grande">
           <span className="num text-xl" style={{ color: tinta }}>
-            {valore == null ? VUOTO : Math.round(valore)}
+            {contato == null ? VUOTO : Math.round(contato)}
           </span>
           {valore != null && <span className="text-[10px] text-testo-soft">su 100</span>}
         </Anello>

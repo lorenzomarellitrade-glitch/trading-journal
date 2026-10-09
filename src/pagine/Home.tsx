@@ -12,12 +12,14 @@ import {
   oggiIso,
   VUOTO,
 } from '../lib/formato'
-import { statoConti, type StatoConto } from '../lib/obiettivi'
+import { statoConti } from '../lib/obiettivi'
 import {
+  andamentoCumulato,
   curvaPnl,
   drawdownMassimo,
   giornate as calcolaGiornate,
   giornoMiglioreEPeggiore,
+  mappaSettimane,
   mediaVincitaPerdita,
   pesoGiornoMigliore,
   profitFactor,
@@ -33,8 +35,12 @@ import {
 import type { Account, TradeCompleto } from '../lib/tipi'
 import BarraRischio from '../componenti/BarraRischio'
 import { Kpi } from '../componenti/campi'
+import MappaSettimane from '../componenti/MappaSettimane'
+import MicroCurva from '../componenti/MicroCurva'
 import MiniCurva from '../componenti/MiniCurva'
 import Punteggio from '../componenti/Punteggio'
+import StatoConti from '../componenti/StatoConti'
+import { useConteggio } from '../componenti/useAnimazione'
 import SelettoreAccount, {
   accountSelezionati,
   type SelezioneAccount,
@@ -47,6 +53,9 @@ import SelettoreAccount, {
  */
 
 type Periodo = 'tutto' | 'mese' | 'settimana'
+
+/** Settimane della mappa a calore nella scheda Costanza. */
+const SETTIMANE_MAPPA = 8
 type Unita = 'usd' | 'percent'
 
 const PERIODI: { valore: Periodo; etichetta: string }[] = [
@@ -134,7 +143,7 @@ function Scheda({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro p-4">
       <header className="mb-2 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-medium text-testo">{titolo}</h2>
         <p className="text-xs text-testo-soft">{sottotitolo}</p>
@@ -183,13 +192,23 @@ export default function Home() {
   const selezionati = useMemo(() => accountSelezionati(account, selezione), [account, selezione])
   const da = inizioPeriodo(periodo, oggi)
 
-  /** Il filtro di periodo e conto vale per tutto, tranne limiti e stato dei conti. */
-  const filtrati = useMemo(() => {
+  /** I trade dei conti selezionati, di qualsiasi data. */
+  const deiConti = useMemo(() => {
     const ids = new Set(selezionati.map((a) => a.id))
-    return trades.filter(
-      (t) => (da == null || t.data >= da) && (t.executions ?? []).some((e) => ids.has(e.account_id)),
-    )
-  }, [trades, selezionati, da])
+    return trades.filter((t) => (t.executions ?? []).some((e) => ids.has(e.account_id)))
+  }, [trades, selezionati])
+
+  /** Il filtro di periodo vale per tutto, tranne limiti, mappa e stato dei conti. */
+  const filtrati = useMemo(
+    () => (da == null ? deiConti : deiConti.filter((t) => t.data >= da)),
+    [deiConti, da],
+  )
+
+  /** La mappa guarda sempre le ultime settimane: con il filtro "Settimana" sarebbe vuota. */
+  const mappa = useMemo(
+    () => mappaSettimane(calcolaGiornate(deiConti, selezionati), oggi, SETTIMANE_MAPPA),
+    [deiConti, selezionati, oggi],
+  )
 
   const dati = useMemo(() => {
     const generale = riepiloga(filtrati, selezionati)
@@ -210,6 +229,7 @@ export default function Home() {
       estremi: giornoMiglioreEPeggiore(elenco),
       peso: pesoGiornoMigliore(elenco),
       perGiorno: tradePerGiorno(filtrati),
+      andamento: andamentoCumulato(filtrati, selezionati),
     }
   }, [filtrati, selezionati, impostazioni])
 
@@ -263,7 +283,7 @@ export default function Home() {
   return (
     <div className="space-y-4">
       {/* --- Filtri ------------------------------------------------------- */}
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-bordo bg-superficie px-4 py-3">
+      <section className="riquadro flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-medium tracking-tight">Home</h1>
           <span className="num text-xs text-testo-soft">
@@ -296,47 +316,85 @@ export default function Home() {
       )}
 
       {/* --- Punteggi e P&L ----------------------------------------------- */}
-      <div className="grid gap-3 lg:grid-cols-4">
-        <Punteggio
-          titolo="Processo"
-          spiegazione="Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua."
-          punteggio={dati.processo}
-        />
-        <Punteggio
-          titolo="Risultati"
-          spiegazione="Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade."
-          punteggio={dati.risultati}
-        />
-
-        <section className="grid gap-5 rounded-card border border-bordo bg-superficie p-4 sm:grid-cols-[auto_1fr] lg:col-span-2">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-testo-soft">P&amp;L del periodo</p>
-            <p className={`num mt-0.5 text-3xl tracking-tight ${classeSegno(chiusi > 0 ? generale.pnlUsd : null)}`}>
-              {chiusi > 0 ? importo(generale.pnlUsd, generale.pnlPercent) : VUOTO}
-            </p>
-            {chiusi > 0 && (
-              <p className={`num text-xs ${classeSegno(generale.pnlUsd)}`}>
-                {altraUnita(generale.pnlUsd, generale.pnlPercent)}
-              </p>
-            )}
-            <p className="num mt-3 text-xs leading-relaxed text-testo-soft">
-              {generale.numeroTrade} trade · {giornateTotali}{' '}
-              {giornateTotali === 1 ? 'giornata' : 'giornate'}
-            </p>
-          </div>
-          <MiniCurva
-            punti={dati.curva.map((p) => ({ data: p.data, valore: (inUsd ? p.usd : p.percent) ?? 0 }))}
+      {/* Processo in alto a sinistra, dove parte la lettura; il P&L è la card
+          più grande ma viene dopo. */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3">
+          <Punteggio
+            titolo="Processo"
+            spiegazione="Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua."
+            punteggio={dati.processo}
           />
+          <Punteggio
+            titolo="Risultati"
+            spiegazione="Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade."
+            punteggio={dati.risultati}
+          />
+        </div>
+
+        <section
+          className={`riquadro flex flex-col p-5 lg:col-span-2 ${
+            chiusi === 0 || generale.pnlUsd === 0
+              ? ''
+              : generale.pnlUsd > 0
+                ? 'alone-positivo'
+                : 'alone-negativo'
+          }`}
+        >
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-testo-soft">P&amp;L del periodo</p>
+              {chiusi > 0 ? (
+                <NumeroContato
+                  key={unita}
+                  valore={inUsd ? generale.pnlUsd : generale.pnlPercent}
+                  formatta={(v) => importo(v, v)}
+                  className={`mt-1 text-5xl font-medium tracking-tight ${classeSegno(generale.pnlUsd)}`}
+                />
+              ) : (
+                <p className="mt-1 text-5xl text-testo-soft">{VUOTO}</p>
+              )}
+            </div>
+
+            <dl className="num grid grid-cols-3 gap-x-6 gap-y-1 text-right">
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide text-testo-soft">
+                  {inUsd ? 'In %' : 'In $'}
+                </dt>
+                <dd className={`text-sm ${classeSegno(chiusi > 0 ? generale.pnlUsd : null)}`}>
+                  {chiusi > 0 ? altraUnita(generale.pnlUsd, generale.pnlPercent) : VUOTO}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide text-testo-soft">Trade</dt>
+                <dd className="text-sm text-testo">{generale.numeroTrade}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-wide text-testo-soft">Giornate</dt>
+                <dd className="text-sm text-testo">{giornateTotali}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="mt-4 flex-1">
+            <MiniCurva
+              punti={dati.curva.map((p) => ({ data: p.data, valore: (inUsd ? p.usd : p.percent) ?? 0 }))}
+              formatta={(v) => importo(v, v)}
+            />
+          </div>
         </section>
       </div>
 
-      {/* --- Riquadri ----------------------------------------------------- */}
+      {/* --- Riquadri: il numero sopra, la sua forma sotto ----------------- */}
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           etichetta="Win rate"
           icona={ICONE.bersaglio}
           valore={generale.winRate == null ? VUOTO : formattaPercent(generale.winRate, 0)}
           nota={`${generale.vittorie} su ${chiusi} conclusi`}
+          grafico={
+            <MicroCurva valori={dati.andamento.winRate} descrizione="win rate trade dopo trade" />
+          }
         />
         <Kpi
           etichetta="Profit factor"
@@ -347,6 +405,12 @@ export default function Home() {
               : dati.pf.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           }
           nota={dati.pf == null && medie.vincite > 0 ? 'nessuna perdita' : 'vinto lordo ÷ perso lordo'}
+          grafico={
+            <MicroCurva
+              valori={dati.andamento.profitFactor.filter((v): v is number => v != null)}
+              descrizione="profit factor trade dopo trade"
+            />
+          }
         />
         <Kpi
           etichetta="Expectancy"
@@ -360,6 +424,9 @@ export default function Home() {
                   generale.pnlPercent == null ? null : generale.pnlPercent / chiusi,
                 )} per trade`
               : undefined
+          }
+          grafico={
+            <MicroCurva valori={dati.andamento.expectancyR} descrizione="expectancy in R trade dopo trade" />
           }
         />
         <Kpi
@@ -377,6 +444,7 @@ export default function Home() {
               ? undefined
               : `rapporto ${medie.rapporto.toLocaleString('it-IT', { maximumFractionDigits: 2 })}`
           }
+          grafico={<Proporzione vincita={medie.vincitaUsd} perdita={medie.perditaUsd} />}
         />
       </dl>
 
@@ -442,6 +510,9 @@ export default function Home() {
         </Scheda>
 
         <Scheda titolo="Costanza" sottotitolo="Si contano le giornate, non i trade">
+          <div className="mb-3 border-b border-bordo pb-3">
+            <MappaSettimane mappa={mappa} inUsd={inUsd} />
+          </div>
           <dl>
             <Riga
               etichetta="Giornate in utile"
@@ -458,7 +529,7 @@ export default function Home() {
                 VUOTO
               )}
             </Riga>
-            <Riga etichetta="Serie attuale" nota={<UltimeGiornate elenco={dati.elenco} />}>
+            <Riga etichetta="Serie attuale">
               {serie.attuale === 0 ? (
                 VUOTO
               ) : (
@@ -516,10 +587,11 @@ export default function Home() {
       </div>
 
       {/* --- Stato dei conti ---------------------------------------------- */}
-      {stati.length > 0 && <StatoContiCompatto stati={stati} />}
+      {/* Gli stessi anelli del Calendario: target e margine di drawdown statico. */}
+      {stati.length > 0 && <StatoConti stati={stati} />}
 
       {trades.length === 0 && (
-        <p className="rounded-card border border-bordo bg-superficie px-4 py-6 text-center text-sm text-testo-soft">
+        <p className="riquadro px-4 py-6 text-center text-sm text-testo-soft">
           Nessun trade registrato.{' '}
           <Link to="/trade/nuovo" className="text-accento hover:underline">
             Inserisci il primo
@@ -529,8 +601,8 @@ export default function Home() {
       )}
 
       <p className="text-[11px] text-testo-soft">
-        Limiti di perdita e stato dei conti ignorano il filtro di periodo: parlano sempre di oggi,
-        di questa settimana e di tutto lo storico di ciascun conto. Le analisi complete sono in{' '}
+        Limiti di perdita, mappa delle settimane e stato dei conti ignorano il filtro di periodo:
+        parlano sempre di oggi, delle ultime settimane e di tutto lo storico di ciascun conto. Le analisi complete sono in{' '}
         <Link to="/statistiche" className="text-accento hover:underline">
           Statistiche
         </Link>
@@ -540,118 +612,44 @@ export default function Home() {
   )
 }
 
-/** Le ultime dieci giornate come quadretti: utile, perdita o pari. */
-function UltimeGiornate({ elenco }: { elenco: Giornata[] }) {
-  if (elenco.length === 0) return null
+/**
+ * Un importo grande che conta fino al suo valore: da zero all'apertura, dal
+ * valore precedente al cambio di filtro. Con movimento ridotto è subito fermo.
+ */
+function NumeroContato({
+  valore,
+  formatta,
+  className,
+}: {
+  valore: number | null
+  formatta: (v: number) => string
+  className: string
+}) {
+  const mostrato = useConteggio(valore)
   return (
-    <span className="mt-1 flex justify-end gap-0.5" aria-hidden="true">
-      {elenco.slice(-10).map((g) => (
-        <span
-          key={g.data}
-          title={`${formattaData(g.data)}: ${formattaUsd(g.pnlUsd, true)}`}
-          className={`h-2.5 w-2.5 rounded-sm ${
-            g.pnlUsd > 0 ? 'bg-positivo' : g.pnlUsd < 0 ? 'bg-negativo' : 'bg-bordo'
-          }`}
-        />
-      ))}
-    </span>
+    <p className={`num ${className}`}>
+      {/* Il lettore di schermo legge solo il valore finale, non i passaggi. */}
+      <span aria-hidden="true">{mostrato == null ? VUOTO : formatta(mostrato)}</span>
+      <span className="sr-only">{valore == null ? VUOTO : formatta(valore)}</span>
+    </p>
   )
 }
 
 /**
- * Stato di ciascun conto attivo rispetto alle regole della prop, in una riga:
- * quanto manca al target e quanto margine resta prima del drawdown massimo,
- * statico sul saldo iniziale (lib/obiettivi.ts).
+ * Vincita media contro perdita media come due barre in proporzione: si vede
+ * subito se si vince più di quanto si perde, a parità di trade.
  */
-function StatoContiCompatto({ stati }: { stati: StatoConto[] }) {
+function Proporzione({ vincita, perdita }: { vincita: number | null; perdita: number | null }) {
+  if (vincita == null || perdita == null) return <div className="h-7" aria-hidden="true" />
+  const totale = vincita + Math.abs(perdita)
+  const quotaVincita = totale > 0 ? (vincita / totale) * 100 : 50
+
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
-      <header className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-medium text-testo">Stato dei conti</h2>
-        <Link to="/calendario" className="text-xs text-accento hover:underline">
-          Dettaglio nel calendario
-        </Link>
-      </header>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {stati.map((s) => (
-          <div key={s.account.id} className="rounded-md border border-bordo bg-sfondo p-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-testo">{s.account.nome}</span>
-              <span className={`num text-sm ${classeSegno(s.pnlPercent)}`}>
-                {formattaPercent(s.pnlPercent, 2, true)}
-                <span className="ml-2 text-xs">{formattaUsd(s.pnlUsd, true)}</span>
-              </span>
-            </div>
-
-            {s.targetPercent == null && s.drawdownPercent == null ? (
-              <p className="mt-2 text-[11px] text-testo-soft">Nessun obiettivo impostato.</p>
-            ) : (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {s.targetPercent != null && s.quotaTarget != null && (
-                  <Misura
-                    etichetta={`Target ${formattaPercent(s.targetPercent, 0)}`}
-                    valore={`${Math.round(Math.min(s.quotaTarget, 9.99) * 100)}% raggiunto`}
-                    quota={s.quotaTarget}
-                    colore={s.quotaTarget >= 1 ? 'bg-positivo' : 'bg-accento'}
-                  />
-                )}
-                {s.drawdownPercent != null && s.marginePercent != null && s.quotaDrawdown != null && (
-                  <Misura
-                    etichetta={`Drawdown max −${formattaPercent(s.drawdownPercent, 0)}`}
-                    valore={`margine ${formattaPercent(s.marginePercent, 2)}`}
-                    quota={s.quotaDrawdown}
-                    colore={
-                      s.quotaDrawdown >= 1
-                        ? 'bg-negativo'
-                        : s.quotaDrawdown >= 0.8
-                          ? 'bg-accento'
-                          : 'bg-testo-soft/50'
-                    }
-                    avviso={s.quotaDrawdown >= 1 ? 'Drawdown massimo superato.' : undefined}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+    <div className="flex h-7 items-center" aria-hidden="true">
+      <div className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full">
+        <span className="h-full rounded-l-full bg-positivo" style={{ width: `${quotaVincita}%` }} />
+        <span className="h-full flex-1 rounded-r-full bg-negativo" />
       </div>
-    </section>
-  )
-}
-
-function Misura({
-  etichetta,
-  valore,
-  quota,
-  colore,
-  avviso,
-}: {
-  etichetta: string
-  valore: string
-  /** Da 0 a 1 e oltre */
-  quota: number
-  /** Classe di sfondo della barra, da un token */
-  colore: string
-  avviso?: string
-}) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</span>
-        <span className="num text-xs text-testo">{valore}</span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bordo">
-        <div
-          className={`h-full rounded-full ${colore}`}
-          style={{ width: `${Math.min(100, Math.max(0, quota) * 100)}%` }}
-        />
-      </div>
-      {avviso && (
-        <p role="alert" className="mt-1 text-[11px] text-negativo">
-          {avviso}
-        </p>
-      )}
     </div>
   )
 }

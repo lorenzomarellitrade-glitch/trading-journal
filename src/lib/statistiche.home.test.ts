@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { A, acc, ENTRAMBI, exe, perdente, trade, vincente } from './fixture'
 import {
+  andamentoCumulato,
   curvaPnl,
   giornate,
   giornoMiglioreEPeggiore,
+  mappaSettimane,
   mediaVincitaPerdita,
   pesoGiornoMigliore,
   profitFactor,
@@ -241,5 +243,67 @@ describe('curvaPnl', () => {
   it('la percentuale usa i soli conti che hanno operato nel periodo', () => {
     const punti = curvaPnl([trade('2026-09-01', 'long', [vincente('a')])], [A, acc('c', 50000)])
     expect(punti[0].percent).toBeCloseTo(0.5)
+  })
+})
+
+describe('andamentoCumulato', () => {
+  it('win rate, profit factor ed expectancy dopo ogni trade concluso, in ordine di tempo', () => {
+    const a = andamentoCumulato(
+      [
+        trade('2026-09-03', 'long', [vincente('a')]),
+        trade('2026-09-01', 'long', [vincente('a')]),
+        trade('2026-09-02', 'long', [perdente('a')]),
+        trade('2026-09-04', 'long', [aperto('a')]),
+      ],
+      [A],
+    )
+    // Ordine: +2R, −1R, +2R. Il trade aperto non conta.
+    expect(a.winRate).toEqual([100, 50, (2 / 3) * 100])
+    expect(a.profitFactor).toEqual([null, 2, 4])
+    expect(a.expectancyR[0]).toBeCloseTo(2)
+    expect(a.expectancyR[1]).toBeCloseTo(0.5)
+    expect(a.expectancyR[2]).toBeCloseTo(1)
+  })
+
+  it("l'ora di entrata ordina i trade della stessa giornata", () => {
+    const a = andamentoCumulato(
+      [
+        trade('2026-09-01', 'long', [vincente('a')], { ora_entrata: '11:00:00' }),
+        trade('2026-09-01', 'long', [perdente('a')], { ora_entrata: '09:30:00' }),
+      ],
+      [A],
+    )
+    expect(a.winRate).toEqual([0, 50])
+  })
+})
+
+describe('mappaSettimane', () => {
+  it('settimane da lunedì a venerdì, la più recente per ultima', () => {
+    // 2026-10-09 è un venerdì
+    const m = mappaSettimane([g('2026-10-07', 300), g('2026-09-29', -500)], '2026-10-09', 2)
+    expect(m.settimane.map((s) => s.lunedi)).toEqual(['2026-09-28', '2026-10-05'])
+    expect(m.settimane[1].giorni.map((x) => x.data)).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-09',
+    ])
+    expect(m.settimane[1].giorni[2].pnlUsd).toBe(300)
+    expect(m.settimane[0].giorni[1].pnlUsd).toBe(-500)
+    expect(m.settimane[0].giorni[0].pnlUsd).toBeNull()
+    expect(m.massimoAssoluto).toBe(500)
+  })
+
+  it('segna i giorni della settimana in corso che devono ancora venire', () => {
+    // 2026-10-07 è un mercoledì
+    const m = mappaSettimane([], '2026-10-07', 1)
+    expect(m.settimane[0].giorni.map((x) => x.futuro)).toEqual([false, false, false, true, true])
+    expect(m.massimoAssoluto).toBe(0)
+  })
+
+  it('ignora le giornate più vecchie della finestra', () => {
+    const m = mappaSettimane([g('2026-08-03', 900)], '2026-10-09', 2)
+    expect(m.massimoAssoluto).toBe(0)
   })
 })

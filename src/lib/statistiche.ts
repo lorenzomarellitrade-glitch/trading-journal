@@ -6,7 +6,13 @@ import {
   type Riepilogo,
 } from './aggregazioni'
 import { CONFERME_TOTALI, contaConferme } from './calcoli'
-import { indiceGiornoSettimana, NOMI_GIORNI_ESTESI, NOMI_MESI } from './date'
+import {
+  aggiungiGiorni,
+  indiceGiornoSettimana,
+  inizioSettimana,
+  NOMI_GIORNI_ESTESI,
+  NOMI_MESI,
+} from './date'
 import type { Account, Esito, TradeCompleto } from './tipi'
 
 /**
@@ -821,4 +827,103 @@ export function curvaPnl(trades: TradeCompleto[], account: Account[]): PuntoCurv
     cumulato += g.pnlUsd
     return { data: g.data, usd: cumulato, percent: base > 0 ? (cumulato / base) * 100 : null }
   })
+}
+
+export interface AndamentoCumulato {
+  /** Win rate cumulato dopo ogni trade concluso, in % */
+  winRate: number[]
+  /** Profit factor cumulato; null finché non c'è almeno una perdita */
+  profitFactor: (number | null)[]
+  /** Expectancy cumulata in R */
+  expectancyR: number[]
+}
+
+/**
+ * Come cambiano win rate, profit factor ed expectancy trade dopo trade, in
+ * ordine cronologico (data e ora di entrata). Alimenta le micro-curve dei
+ * riquadri della Home: l'ultimo valore coincide con quello del riquadro.
+ *
+ * Usa le stesse regole del riepilogo: solo i trade conclusi, win rate su
+ * vincite + perdite + pareggi, expectancy sugli R dei trade conclusi.
+ */
+export function andamentoCumulato(trades: TradeCompleto[], account: Account[]): AndamentoCumulato {
+  const ordinati = [...trades].sort((x, y) =>
+    `${x.data} ${x.ora_entrata ?? ''}`.localeCompare(`${y.data} ${y.ora_entrata ?? ''}`),
+  )
+
+  const risultato: AndamentoCumulato = { winRate: [], profitFactor: [], expectancyR: [] }
+  let chiusi = 0
+  let vittorie = 0
+  let vinto = 0
+  let perso = 0
+  let sommaR = 0
+
+  for (const t of ordinati) {
+    const m = metricheTrade(t, account)
+    if (m.pnlUsd == null) continue
+
+    chiusi++
+    if (m.esito === 'win') vittorie++
+    if (m.pnlUsd > 0) vinto += m.pnlUsd
+    else perso -= m.pnlUsd
+    sommaR += m.rMedio ?? 0
+
+    risultato.winRate.push((vittorie / chiusi) * 100)
+    risultato.profitFactor.push(perso > 0 ? vinto / perso : null)
+    risultato.expectancyR.push(sommaR / chiusi)
+  }
+
+  return risultato
+}
+
+/** Una casella della mappa delle settimane. */
+export interface CasellaMappa {
+  data: string
+  /** P&L della giornata; null se non ci sono trade conclusi */
+  pnlUsd: number | null
+  pnlPercent: number | null
+  numeroTrade: number
+  /** Giorno ancora da venire nella settimana in corso */
+  futuro: boolean
+}
+
+export interface MappaSettimane {
+  /** Dalla settimana più vecchia alla corrente; ognuna da lunedì a venerdì */
+  settimane: { lunedi: string; giorni: CasellaMappa[] }[]
+  /** Il P&L assoluto più grande della mappa: fa da scala per l'intensità */
+  massimoAssoluto: number
+}
+
+/**
+ * Le ultime settimane come griglia di giornate feriali, per la mappa a calore
+ * della Home. Le settimane sono di calendario, da lunedì, e l'ultima è quella
+ * che contiene `oggi`.
+ */
+export function mappaSettimane(
+  elenco: Giornata[],
+  oggi: string,
+  numeroSettimane = 8,
+): MappaSettimane {
+  const perData = new Map(elenco.map((g) => [g.data, g]))
+  const lunediCorrente = inizioSettimana(oggi)
+  let massimoAssoluto = 0
+
+  const settimane = Array.from({ length: numeroSettimane }, (_, i) => {
+    const lunedi = aggiungiGiorni(lunediCorrente, -7 * (numeroSettimane - 1 - i))
+    const giorni = Array.from({ length: 5 }, (_, g): CasellaMappa => {
+      const data = aggiungiGiorni(lunedi, g)
+      const giornata = perData.get(data)
+      if (giornata) massimoAssoluto = Math.max(massimoAssoluto, Math.abs(giornata.pnlUsd))
+      return {
+        data,
+        pnlUsd: giornata?.pnlUsd ?? null,
+        pnlPercent: giornata?.pnlPercent ?? null,
+        numeroTrade: giornata?.numeroTrade ?? 0,
+        futuro: data > oggi,
+      }
+    })
+    return { lunedi, giorni }
+  })
+
+  return { settimane, massimoAssoluto }
 }

@@ -128,7 +128,7 @@ export default function StatoConti({ stati }: { stati: StatoConto[] }) {
   if (stati.length === 0) return null
 
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro p-4">
       <header className="mb-3">
         <h2 className="text-sm font-medium text-testo">Stato dei conti</h2>
         <p className="text-xs text-testo-soft">
