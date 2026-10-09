@@ -37,3 +37,19 @@ export function testoOperazioni(r: RiassuntoGiorno): string {
   const trade = r.numeroTrade === 1 ? '1 trade' : `${r.numeroTrade} trade`
   return `${trade}, ${r.processoCompleto} a ${CONFERME_TOTALI}/${CONFERME_TOTALI}`
 }
+
+/**
+ * I campi del riepilogo settimanale ricavati dai trade del giorno. Riempie
+ * solo quelli ancora vuoti: quello che è già stato scritto a mano resta.
+ * `risultato` arriva già formattato, così il testo è quello che si vede.
+ */
+export function compilaRigaSettimana(
+  riga: { operazioni: string; risultato: string },
+  r: RiassuntoGiorno,
+  risultato: string | null,
+): { operazioni?: string; risultato?: string } {
+  const patch: { operazioni?: string; risultato?: string } = {}
+  if (riga.operazioni.trim() === '') patch.operazioni = testoOperazioni(r)
+  if (riga.risultato.trim() === '' && risultato != null) patch.risultato = risultato
+  return patch
+}

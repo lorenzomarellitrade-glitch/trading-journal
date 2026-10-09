@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   aggiornaPaginaDiario,
+  caricaAccount,
   caricaPaginaDiario,
+  caricaTrades,
   creaPaginaDiario,
   eliminaPaginaDiario,
 } from '../lib/dati'
@@ -18,7 +20,10 @@ import {
 import { formattaDataEstesa, oggiIso, testoInDigitazione } from '../lib/formato'
 import { COPPIE_FOREX } from '../lib/journal'
 import { segmentiMessaggio, type Segmento } from '../lib/messaggio'
-import type { PaginaDiario as Pagina } from '../lib/tipi'
+import { riassuntoGiorno } from '../lib/giorno'
+import type { Account, PaginaDiario as Pagina, TradeCompleto } from '../lib/tipi'
+import ElencoTradeGiorno from '../componenti/ElencoTradeGiorno'
+import RiassuntoGiornoChip from '../componenti/RiassuntoGiornoChip'
 
 /**
  * La pagina del giorno: a sinistra il piano, a destra la verifica.
@@ -134,6 +139,28 @@ export default function PaginaDiario() {
   const [confermaElimina, setConfermaElimina] = useState(false)
 
   const bloccato = bozza.piano_bloccato_at != null
+
+  /** I trade della data della pagina: la verifica si fa sui fatti. */
+  const [tradeGiorno, setTradeGiorno] = useState<TradeCompleto[]>([])
+  const [conti, setConti] = useState<Account[]>([])
+  useEffect(() => {
+    const data = bozza.data
+    if (!data) return
+    let annullato = false
+    Promise.all([caricaTrades(data, data), caricaAccount()])
+      .then(([t, acc]) => {
+        if (annullato) return
+        setTradeGiorno(t)
+        setConti(acc)
+      })
+      // Un di più: senza trade la pagina resta compilabile.
+      .catch(() => {
+        if (!annullato) setTradeGiorno([])
+      })
+    return () => {
+      annullato = true
+    }
+  }, [bozza.data])
 
   useEffect(() => {
     if (!id) return
@@ -258,7 +285,7 @@ export default function PaginaDiario() {
       {/* --- Intestazione: fa parte del piano, quindi si blocca con esso ---- */}
       <fieldset
         disabled={bloccato}
-        className="grid gap-3 rounded-card border border-bordo bg-superficie p-4 sm:grid-cols-3"
+        className="riquadro grid gap-3 p-4 sm:grid-cols-3"
       >
         <Voce etichetta="Data">
           <input
@@ -301,7 +328,7 @@ export default function PaginaDiario() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* --- PRIMA · dichiaro ------------------------------------------- */}
-        <section className="rounded-card border border-bordo bg-superficie p-4">
+        <section className="riquadro p-4">
           <header className="mb-3 flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-medium uppercase tracking-wide text-accento">
               Prima · dichiaro
@@ -431,7 +458,7 @@ export default function PaginaDiario() {
         </section>
 
         {/* --- DOPO · verifico -------------------------------------------- */}
-        <section className="rounded-card border border-bordo bg-superficie p-4">
+        <section className="riquadro p-4">
           <header className="mb-3">
             <h2 className="text-sm font-medium uppercase tracking-wide text-accento">
               Dopo · verifico
@@ -442,6 +469,27 @@ export default function PaginaDiario() {
               </p>
             )}
           </header>
+
+          {/* I trade registrati quel giorno: si verifica il piano sui fatti. */}
+          <div className="mb-4 rounded-md border border-bordo bg-sfondo p-3">
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-testo">Trade del giorno</span>
+              <span className="flex items-center gap-2">
+                {tradeGiorno.length > 0 && (
+                  <RiassuntoGiornoChip r={riassuntoGiorno(tradeGiorno, conti)} />
+                )}
+                {bozza.data && (
+                  <Link
+                    to={`/trade/nuovo?data=${bozza.data}`}
+                    className="text-xs text-accento hover:underline"
+                  >
+                    + Trade
+                  </Link>
+                )}
+              </span>
+            </div>
+            <ElencoTradeGiorno trades={tradeGiorno} account={conti} />
+          </div>
 
           <fieldset disabled={!bloccato} className="space-y-4">
             <Voce etichetta="Che cosa è successo" aiuto="Solo i fatti: dove è arrivato il prezzo, cosa è stato eseguito.">

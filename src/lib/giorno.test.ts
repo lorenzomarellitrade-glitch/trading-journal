@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { A, exe, perdente, PROCESSO_COMPLETO, trade, vincente } from './fixture'
-import { riassuntoGiorno, testoOperazioni } from './giorno'
+import { compilaRigaSettimana, riassuntoGiorno, testoOperazioni } from './giorno'
 
 describe('riassuntoGiorno', () => {
   it('conta i trade, il P&L dei conclusi e quanti erano a 5/5', () => {
@@ -33,5 +33,26 @@ describe('testoOperazioni', () => {
     expect(testoOperazioni({ numeroTrade: 0, conclusi: 0, pnlUsd: null, pnlPercent: null, processoCompleto: 0 })).toBe(
       'Nessun trade',
     )
+  })
+})
+
+describe('compilaRigaSettimana', () => {
+  const r = { numeroTrade: 2, conclusi: 2, pnlUsd: 450, pnlPercent: 0.45, processoCompleto: 1 }
+
+  it('riempie operazioni e risultato quando sono vuoti', () => {
+    expect(compilaRigaSettimana({ operazioni: '', risultato: ' ' }, r, '+450,00 USD')).toEqual({
+      operazioni: '2 trade, 1 a 5/5',
+      risultato: '+450,00 USD',
+    })
+  })
+
+  it('non tocca quello che è già stato scritto a mano', () => {
+    expect(compilaRigaSettimana({ operazioni: 'scalp', risultato: '+1R' }, r, '+450,00 USD')).toEqual({})
+  })
+
+  it('senza un risultato da proporre lascia vuoto il campo', () => {
+    expect(compilaRigaSettimana({ operazioni: '', risultato: '' }, r, null)).toEqual({
+      operazioni: '2 trade, 1 a 5/5',
+    })
   })
 })

@@ -10,7 +10,7 @@ import {
   eliminaNota,
 } from '../lib/dati'
 import { primoDelMese, ultimoDelMese } from '../lib/date'
-import { formattaData, formattaDataEstesa, formattaUsd, oggiIso } from '../lib/formato'
+import { formattaData, formattaDataEstesa, oggiIso } from '../lib/formato'
 import { riassuntoGiorno, type RiassuntoGiorno } from '../lib/giorno'
 import {
   CANALI_MERCATO,
@@ -32,6 +32,7 @@ import SelettoreMese, {
   daChiave,
   etichettaChiave,
 } from '../componenti/SelettoreMese'
+import RiassuntoGiornoChip from '../componenti/RiassuntoGiornoChip'
 
 /**
  * Journal emotivo, organizzato come un server Discord: un gruppo per mercato
@@ -604,7 +605,7 @@ export default function Journal() {
                     <span className="rounded-full border border-bordo px-3 py-0.5 text-[11px] capitalize text-testo">
                       {formattaDataEstesa(giorno)}
                     </span>
-                    {riassunti.has(giorno) && <RiassuntoTrade r={riassunti.get(giorno)!} />}
+                    {riassunti.has(giorno) && <RiassuntoGiornoChip r={riassunti.get(giorno)!} />}
                     <span className="h-px flex-1 bg-bordo" />
                   </div>
 
@@ -678,24 +679,5 @@ export default function Journal() {
         </div>
       </div>
     </div>
-  )
-}
-
-/**
- * I trade del giorno in una riga, accanto alla data: quanti, il P&L e quanti
- * a 5/5. Collega quello che si è scritto a quello che si è fatto.
- */
-function RiassuntoTrade({ r }: { r: RiassuntoGiorno }) {
-  const segno =
-    r.pnlUsd == null || r.pnlUsd === 0 ? 'text-testo-soft' : r.pnlUsd > 0 ? 'text-positivo' : 'text-negativo'
-  return (
-    <span
-      title={`${r.numeroTrade} trade, ${r.processoCompleto} con 5 conferme su 5`}
-      className="num rounded-full border border-bordo px-2.5 py-0.5 text-[11px] text-testo-soft"
-    >
-      {r.numeroTrade} trade
-      {r.pnlUsd != null && <span className={`ml-1.5 ${segno}`}>{formattaUsd(r.pnlUsd, true)}</span>}
-      <span className="ml-1.5">✓ {r.processoCompleto}/{r.numeroTrade}</span>
-    </span>
   )
 }
