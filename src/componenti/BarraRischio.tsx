@@ -63,9 +63,18 @@ function Barra({
  * Con più account selezionati mostra il peggiore: è quello che fa scattare
  * il breach della prop firm.
  */
-export default function BarraRischio({ consumo }: { consumo: ConsumoRischio }) {
+export default function BarraRischio({
+  consumo,
+  incorniciata = true,
+}: {
+  consumo: ConsumoRischio
+  /** false quando sta già dentro una card, es. nella scheda Rischio della Home */
+  incorniciata?: boolean
+}) {
   return (
-    <div className="flex gap-6 rounded-card border border-bordo bg-superficie px-4 py-3">
+    <div
+      className={`flex gap-6 ${incorniciata ? 'rounded-card border border-bordo bg-superficie px-4 py-3' : ''}`}
+    >
       <Barra
         etichetta="Perdita oggi"
         perdita={consumo.perditaOggiPercent}

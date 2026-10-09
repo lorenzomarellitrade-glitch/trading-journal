@@ -1,4 +1,10 @@
-import { capitaleOperativo, metricheTrade, riepiloga, type Riepilogo } from './aggregazioni'
+import {
+  capitaleOperativo,
+  metricheTrade,
+  raggruppaPerGiorno,
+  riepiloga,
+  type Riepilogo,
+} from './aggregazioni'
 import { CONFERME_TOTALI, contaConferme } from './calcoli'
 import { indiceGiornoSettimana, NOMI_GIORNI_ESTESI, NOMI_MESI } from './date'
 import type { Account, Esito, TradeCompleto } from './tipi'
@@ -574,4 +580,245 @@ export function analisiProcesso(trades: TradeCompleto[], account: Account[]): Co
       { etichetta: 'Short', filtro: (t) => t.direzione === 'short' },
     ]),
   ]
+}
+
+// ---------------------------------------------------------------------------
+// Sintesi per la Home
+// ---------------------------------------------------------------------------
+
+/**
+ * Profit factor: quanto si è vinto in tutto per ogni dollaro perso.
+ * Somma delle vincite ÷ somma delle perdite, per trade e non per execution.
+ *
+ * null senza trade conclusi, e anche senza nessuna perdita: il rapporto
+ * sarebbe infinito, e un "∞" su pochi trade dice più di quanto si sappia.
+ */
+export function profitFactor(trades: TradeCompleto[], account: Account[]): number | null {
+  let vinto = 0
+  let perso = 0
+  for (const t of trades) {
+    const pnl = metricheTrade(t, account).pnlUsd
+    if (pnl == null) continue
+    if (pnl > 0) vinto += pnl
+    else perso -= pnl
+  }
+  return perso > 0 ? vinto / perso : null
+}
+
+export interface MediaVincitaPerdita {
+  vincite: number
+  perdite: number
+  /** Media dei trade in utile; null senza vincite */
+  vincitaUsd: number | null
+  vincitaPercent: number | null
+  /** Media dei trade in perdita, negativa; null senza perdite */
+  perditaUsd: number | null
+  perditaPercent: number | null
+  /** Vincita media ÷ |perdita media|; null se manca una delle due */
+  rapporto: number | null
+}
+
+function media(valori: (number | null)[]): number | null {
+  const validi = valori.filter((x): x is number => x != null)
+  return validi.length > 0 ? validi.reduce((s, x) => s + x, 0) / validi.length : null
+}
+
+/**
+ * Vincita media e perdita media per trade. I pareggi non entrano in nessuna
+ * delle due: abbasserebbero entrambe le medie senza dire nulla.
+ */
+export function mediaVincitaPerdita(
+  trades: TradeCompleto[],
+  account: Account[],
+): MediaVincitaPerdita {
+  const vinti: { usd: number; percent: number | null }[] = []
+  const persi: { usd: number; percent: number | null }[] = []
+
+  for (const t of trades) {
+    const m = metricheTrade(t, account)
+    if (m.pnlUsd == null || m.pnlUsd === 0) continue
+    const voce = { usd: m.pnlUsd, percent: m.pnlPercent }
+    if (m.pnlUsd > 0) vinti.push(voce)
+    else persi.push(voce)
+  }
+
+  const vincitaUsd = media(vinti.map((x) => x.usd))
+  const perditaUsd = media(persi.map((x) => x.usd))
+
+  return {
+    vincite: vinti.length,
+    perdite: persi.length,
+    vincitaUsd,
+    vincitaPercent: media(vinti.map((x) => x.percent)),
+    perditaUsd,
+    perditaPercent: media(persi.map((x) => x.percent)),
+    rapporto: vincitaUsd != null && perditaUsd != null ? vincitaUsd / Math.abs(perditaUsd) : null,
+  }
+}
+
+/**
+ * R:R pianificato medio: il rapporto fra target e stop fissato all'entrata.
+ * Conta anche i trade ancora aperti: è il piano, non l'esito.
+ */
+export function rrMedioPianificato(trades: TradeCompleto[], account: Account[]): number | null {
+  return media(trades.map((t) => metricheTrade(t, account).rrMedio))
+}
+
+export interface RischioOltreSoglia {
+  /** Trade con un rischio calcolabile */
+  totale: number
+  /** Quanti superano la soglia per trade delle impostazioni */
+  oltre: number
+}
+
+/** Quanti trade hanno rischiato più della soglia per trade. */
+export function rischioOltreSoglia(
+  trades: TradeCompleto[],
+  account: Account[],
+  sogliaPercent: number,
+): RischioOltreSoglia {
+  let totale = 0
+  let oltre = 0
+  for (const t of trades) {
+    const r = metricheTrade(t, account).rischioPercent
+    if (r == null) continue
+    totale++
+    if (r > sogliaPercent) oltre++
+  }
+  return { totale, oltre }
+}
+
+/** Una giornata con almeno un trade concluso. */
+export interface Giornata {
+  data: string
+  pnlUsd: number
+  pnlPercent: number | null
+  /** Tutti i trade della giornata, anche quelli non conclusi */
+  numeroTrade: number
+}
+
+/**
+ * Le giornate chiuse, dalla più vecchia alla più recente. È la base di serie,
+ * giorno migliore e peggiore e curva: contano le giornate, non i trade, come
+ * il limite di perdita giornaliero della prop.
+ */
+export function giornate(trades: TradeCompleto[], account: Account[]): Giornata[] {
+  const risultato: Giornata[] = []
+  for (const [data, delGiorno] of raggruppaPerGiorno(trades)) {
+    const r = riepiloga(delGiorno, account)
+    if (r.numeroChiusi === 0) continue
+    risultato.push({
+      data,
+      pnlUsd: r.pnlUsd,
+      pnlPercent: r.pnlPercent,
+      numeroTrade: delGiorno.length,
+    })
+  }
+  return risultato.sort((a, b) => a.data.localeCompare(b.data))
+}
+
+export interface SerieGiornate {
+  /** Segno della serie in corso: 1 in utile, -1 in perdita, 0 nessuna serie */
+  segnoAttuale: 1 | -1 | 0
+  /** Giornate consecutive della serie in corso */
+  attuale: number
+  /** Serie più lunga di giornate in utile */
+  maxVincenti: number
+  /** Serie più lunga di giornate in perdita */
+  maxPerdenti: number
+}
+
+/**
+ * Serie di giornate consecutive in utile o in perdita, sulle sole giornate
+ * operative. Una giornata in pari interrompe qualsiasi serie.
+ */
+export function serieGiornate(elenco: Giornata[]): SerieGiornate {
+  let segno: 1 | -1 | 0 = 0
+  let corrente = 0
+  let maxVincenti = 0
+  let maxPerdenti = 0
+
+  for (const g of elenco) {
+    const s: 1 | -1 | 0 = g.pnlUsd > 0 ? 1 : g.pnlUsd < 0 ? -1 : 0
+    if (s !== 0 && s === segno) corrente++
+    else {
+      segno = s
+      corrente = s === 0 ? 0 : 1
+    }
+    if (segno === 1) maxVincenti = Math.max(maxVincenti, corrente)
+    if (segno === -1) maxPerdenti = Math.max(maxPerdenti, corrente)
+  }
+
+  return { segnoAttuale: segno, attuale: corrente, maxVincenti, maxPerdenti }
+}
+
+/**
+ * La giornata con il P&L più alto e quella con il più basso. A parità vince
+ * la più recente. Con una sola giornata le due coincidono.
+ */
+export function giornoMiglioreEPeggiore(elenco: Giornata[]): {
+  migliore: Giornata | null
+  peggiore: Giornata | null
+} {
+  let migliore: Giornata | null = null
+  let peggiore: Giornata | null = null
+  for (const g of elenco) {
+    if (migliore == null || g.pnlUsd >= migliore.pnlUsd) migliore = g
+    if (peggiore == null || g.pnlUsd <= peggiore.pnlUsd) peggiore = g
+  }
+  return { migliore, peggiore }
+}
+
+/**
+ * Quanta parte del profitto del periodo viene dalla giornata migliore, in %.
+ * Se è alta il risultato dipende da un solo giorno: è il criterio di
+ * costanza che molte prop applicano ai payout.
+ *
+ * null se il periodo non è in utile o nessuna giornata lo è: la quota di un
+ * totale negativo non ha senso.
+ */
+export function pesoGiornoMigliore(elenco: Giornata[]): number | null {
+  const totale = elenco.reduce((s, g) => s + g.pnlUsd, 0)
+  const { migliore } = giornoMiglioreEPeggiore(elenco)
+  if (totale <= 0 || migliore == null || migliore.pnlUsd <= 0) return null
+  return (migliore.pnlUsd / totale) * 100
+}
+
+export interface TradePerGiorno {
+  /** Giornate con almeno un trade, anche non concluso */
+  giornate: number
+  media: number | null
+  massimo: number
+}
+
+/** Quanti trade si aprono in una giornata operativa: media e massimo. */
+export function tradePerGiorno(trades: TradeCompleto[]): TradePerGiorno {
+  const conteggi = [...raggruppaPerGiorno(trades).values()].map((d) => d.length)
+  return {
+    giornate: conteggi.length,
+    media: conteggi.length > 0 ? trades.length / conteggi.length : null,
+    massimo: conteggi.length > 0 ? Math.max(...conteggi) : 0,
+  }
+}
+
+/** Un punto della curva del P&L cumulato, in dollari e in percentuale. */
+export interface PuntoCurva {
+  data: string
+  usd: number
+  /** Sul capitale operativo dell'intero periodo; null se non calcolabile */
+  percent: number | null
+}
+
+/**
+ * P&L cumulato giorno per giorno sull'insieme dei conti selezionati: una
+ * linea sola, per la mini-curva della Home. La percentuale usa lo stesso
+ * denominatore del P&L del periodo, così l'ultimo punto coincide con quello.
+ */
+export function curvaPnl(trades: TradeCompleto[], account: Account[]): PuntoCurva[] {
+  const base = capitaleOperativo(trades, account)
+  let cumulato = 0
+  return giornate(trades, account).map((g) => {
+    cumulato += g.pnlUsd
+    return { data: g.data, usd: cumulato, percent: base > 0 ? (cumulato / base) * 100 : null }
+  })
 }

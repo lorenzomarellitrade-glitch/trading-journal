@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import SelettoreTema from './SelettoreTema'
 
 const VOCI = [
+  { a: '/home', etichetta: 'Home', icona: 'M3 10.5 12 3l9 7.5M5 9v11h5v-6h4v6h5V9' },
   { a: '/calendario', etichetta: 'Calendario', icona: 'M7 3v2M17 3v2M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z' },
   { a: '/trade', etichetta: 'Trade', icona: 'M4 6h16M4 12h16M4 18h10' },
   { a: '/statistiche', etichetta: 'Statistiche', icona: 'M4 19V10M10 19V5M16 19v-6M22 19H2' },
@@ -89,7 +90,7 @@ export default function Navigazione() {
               key={v.a}
               to={v.a}
               className={({ isActive }) =>
-                // Sei voci su uno schermo stretto: min-w-0 e truncate impediscono
+                // Sette voci su uno schermo stretto: min-w-0 e truncate impediscono
                 // alle etichette lunghe di allargare la colonna e far sbordare la barra.
                 `flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-2 text-[10px] transition-colors ${
                   isActive ? 'text-accento' : 'text-testo-soft'

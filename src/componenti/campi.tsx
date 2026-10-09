@@ -166,7 +166,8 @@ export function Kpi({
   icona,
 }: {
   etichetta: string
-  valore: string
+  /** Di norma un testo; un nodo quando il valore è composto, es. vincita / perdita */
+  valore: ReactNode
   classe?: string
   nota?: string
   icona?: string
