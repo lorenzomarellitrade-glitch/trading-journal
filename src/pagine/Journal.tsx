@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { raggruppaPerGiorno } from '../lib/aggregazioni'
 import {
   aggiornaNota,
+  caricaAccount,
   caricaMesiConNote,
   caricaNote,
+  caricaTrades,
   creaNota,
   eliminaNota,
 } from '../lib/dati'
 import { primoDelMese, ultimoDelMese } from '../lib/date'
-import { formattaData, formattaDataEstesa, oggiIso } from '../lib/formato'
+import { formattaData, formattaDataEstesa, formattaUsd, oggiIso } from '../lib/formato'
+import { riassuntoGiorno, type RiassuntoGiorno } from '../lib/giorno'
 import {
   CANALI_MERCATO,
   COPPIE_FOREX,
@@ -22,7 +26,7 @@ import {
   type Posizione,
 } from '../lib/journal'
 import { segmentiMessaggio, type Segmento } from '../lib/messaggio'
-import type { Mercato, NotaJournal } from '../lib/tipi'
+import type { Account, Mercato, NotaJournal, TradeCompleto } from '../lib/tipi'
 import SelettoreMese, {
   chiaveMese,
   daChiave,
@@ -290,6 +294,10 @@ export default function Journal() {
 
   const fondo = useRef<HTMLDivElement>(null)
 
+  /** I trade del mese mostrato, per il riassunto accanto a ogni data. */
+  const [tradeMese, setTradeMese] = useState<TradeCompleto[]>([])
+  const [conti, setConti] = useState<Account[]>([])
+
   const conNote = useMemo(() => new Set(mesiConNote), [mesiConNote])
 
   const [anno, numeroMese] = daChiave(mese)
@@ -326,6 +334,37 @@ export default function Journal() {
       annullato = true
     }
   }, [posizione, da, a, coppiaFiltro, conCoppia])
+
+  useEffect(() => {
+    let annullato = false
+    Promise.all([caricaTrades(da, a), caricaAccount()])
+      .then(([t, acc]) => {
+        if (annullato) return
+        setTradeMese(t)
+        setConti(acc)
+      })
+      // Il riassunto è un di più: senza trade il journal funziona lo stesso.
+      .catch(() => {
+        if (!annullato) setTradeMese([])
+      })
+    return () => {
+      annullato = true
+    }
+  }, [da, a])
+
+  /**
+   * Il riassunto dei trade per data. I trade del journal sono su XAUUSD:
+   * il riassunto ha senso nei canali dell'oro e nello Stato mentale, non
+   * in quelli del forex.
+   */
+  const riassunti = useMemo(() => {
+    const mappa = new Map<string, RiassuntoGiorno>()
+    if (posizione.mercato === 'forex') return mappa
+    for (const [data, delGiorno] of raggruppaPerGiorno(tradeMese)) {
+      mappa.set(data, riassuntoGiorno(delGiorno, conti))
+    }
+    return mappa
+  }, [tradeMese, conti, posizione.mercato])
 
   // Aprendo un canale si finisce in fondo, sull'ultimo messaggio.
   useEffect(() => {
@@ -520,7 +559,7 @@ export default function Journal() {
         </aside>
 
         {/* --- Messaggi ---------------------------------------------------- */}
-        <div className="min-w-0 flex-1 rounded-card border border-bordo bg-superficie">
+        <div className="riquadro min-w-0 flex-1">
           <header className="flex flex-wrap items-center justify-between gap-2 border-b border-bordo px-4 py-2">
             <div>
               <h2 className="text-sm font-medium text-testo">
@@ -548,7 +587,7 @@ export default function Journal() {
             </p>
           )}
 
-          <div className="max-h-[55vh] min-h-64 overflow-y-auto p-2">
+          <div className="max-h-[55vh] min-h-64 overflow-y-auto p-2 lg:max-h-[65vh]">
             {caricamento ? (
               <p className="p-4 text-sm text-testo-soft">Caricamento…</p>
             ) : note.length === 0 ? (
@@ -565,6 +604,7 @@ export default function Journal() {
                     <span className="rounded-full border border-bordo px-3 py-0.5 text-[11px] capitalize text-testo">
                       {formattaDataEstesa(giorno)}
                     </span>
+                    {riassunti.has(giorno) && <RiassuntoTrade r={riassunti.get(giorno)!} />}
                     <span className="h-px flex-1 bg-bordo" />
                   </div>
 
@@ -638,5 +678,24 @@ export default function Journal() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * I trade del giorno in una riga, accanto alla data: quanti, il P&L e quanti
+ * a 5/5. Collega quello che si è scritto a quello che si è fatto.
+ */
+function RiassuntoTrade({ r }: { r: RiassuntoGiorno }) {
+  const segno =
+    r.pnlUsd == null || r.pnlUsd === 0 ? 'text-testo-soft' : r.pnlUsd > 0 ? 'text-positivo' : 'text-negativo'
+  return (
+    <span
+      title={`${r.numeroTrade} trade, ${r.processoCompleto} con 5 conferme su 5`}
+      className="num rounded-full border border-bordo px-2.5 py-0.5 text-[11px] text-testo-soft"
+    >
+      {r.numeroTrade} trade
+      {r.pnlUsd != null && <span className={`ml-1.5 ${segno}`}>{formattaUsd(r.pnlUsd, true)}</span>}
+      <span className="ml-1.5">✓ {r.processoCompleto}/{r.numeroTrade}</span>
+    </span>
   )
 }
