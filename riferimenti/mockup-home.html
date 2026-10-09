@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<title>Mockup Home</title>
+<!--
+  Mockup statico della nuova Home, versione desktop.
+  Colori identici ai token di src/index.css. Dati di esempio, calcolati in
+  fondo al file con le stesse regole del journal (aggregazione per trade,
+  capitale operativo, punteggi). Non fa parte dell'app e non entra nel build.
+-->
+<style>
+  :root {
+    --sfondo: #17150f;
+    --superficie: #211e18;
+    --testo: #ece5d9;
+    --testo-soft: #9b9184;
+    --positivo: #93a181;
+    --negativo: #c78a6b;
+    --accento: #c79c74;
+    --bordo: #3a342b;
+    --radius-card: 0.5rem;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--sfondo); color: var(--testo); }
+  body {
+    font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .soft { color: var(--testo-soft); }
+  .pos { color: var(--positivo); }
+  .neg { color: var(--negativo); }
+  .acc { color: var(--accento); }
+
+  /* --- Barra superiore, come Navigazione.tsx ------------------------------ */
+  header.nav {
+    position: sticky; top: 0; z-index: 20;
+    border-bottom: 1px solid var(--bordo);
+    background: rgba(33, 30, 24, 0.95);
+  }
+  .nav-in { max-width: 80rem; margin: 0 auto; display: flex; align-items: center; gap: 2rem; padding: 0.75rem 1.5rem; }
+  .marchio { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; }
+  .nav-voci { display: flex; gap: 4px; }
+  .nav-voci a { padding: 6px 12px; border-radius: 6px; color: var(--testo-soft); text-decoration: none; }
+  .nav-voci a.attiva { background: rgba(199, 156, 116, 0.15); color: var(--accento); }
+  .nav-voci a:not(.attiva):hover { background: var(--sfondo); color: var(--testo); }
+  .nav-dx { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .bottone { border: 1px solid var(--bordo); border-radius: 6px; padding: 6px 12px; background: none; color: var(--testo-soft); font: inherit; cursor: pointer; }
+
+  main { max-width: 80rem; margin: 0 auto; padding: 1.5rem 1.5rem 2.5rem; display: grid; gap: 1rem; }
+
+  .card { border: 1px solid var(--bordo); background: var(--superficie); border-radius: var(--radius-card); }
+  .etichetta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--testo-soft); }
+
+  /* --- Avviso mockup ------------------------------------------------------- */
+  .avviso { border: 1px dashed var(--bordo); border-radius: var(--radius-card); padding: 8px 12px; font-size: 12px; color: var(--testo-soft); }
+
+  /* --- Filtri ------------------------------------------------------------- */
+  .filtri { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+  .titolo-pagina { display: flex; align-items: baseline; gap: 12px; }
+  .titolo-pagina h1 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+  .gruppo { display: flex; gap: 4px; }
+  .pill { border: 1px solid var(--bordo); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 12px; background: none; color: var(--testo-soft); cursor: pointer; }
+  .pill:hover { color: var(--testo); }
+  .pill[aria-pressed='true'] { border-color: var(--accento); background: rgba(199, 156, 116, 0.15); color: var(--accento); }
+  .separatore { width: 1px; align-self: stretch; background: var(--bordo); }
+  .interruttore { display: inline-flex; border: 1px solid var(--bordo); border-radius: 6px; overflow: hidden; }
+  .interruttore button { border: 0; background: none; color: var(--testo-soft); font: inherit; font-size: 12px; padding: 6px 12px; cursor: pointer; min-width: 36px; }
+  .interruttore button[aria-pressed='true'] { background: rgba(199, 156, 116, 0.15); color: var(--accento); }
+
+  /* --- Riga alta: punteggi + P&L ------------------------------------------ */
+  .riga-alta { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; }
+  .punteggio { display: flex; align-items: center; gap: 16px; padding: 16px; }
+  .anello { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+  .anello svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .anello .centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  .anello .valore { font-size: 20px; }
+  .anello .su { font-size: 10px; color: var(--testo-soft); margin-top: 3px; }
+  .punteggio h3 { margin: 0; font-size: 14px; font-weight: 500; }
+  .punteggio p { margin: 2px 0 0; font-size: 12px; line-height: 1.35; color: var(--testo-soft); }
+  .punteggio .campione { font-size: 11px; margin-top: 4px; }
+
+  .pnl { padding: 16px; display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: stretch; }
+  .pnl .grande { font-size: 28px; letter-spacing: -0.01em; margin-top: 2px; }
+  .pnl .sotto { font-size: 12px; margin-top: 2px; }
+  .pnl .meta { font-size: 12px; color: var(--testo-soft); margin-top: 10px; line-height: 1.6; }
+  .curva { position: relative; min-height: 120px; }
+  .curva svg { width: 100%; height: 100%; display: block; }
+  .curva .assi { display: flex; justify-content: space-between; font-size: 10px; color: var(--testo-soft); margin-top: 4px; }
+
+  /* --- Riquadri KPI, come Kpi in campi.tsx --------------------------------- */
+  .kpi-riga { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi { padding: 12px 16px; }
+  .kpi-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .icona { width: 28px; height: 28px; border-radius: 6px; background: rgba(199, 156, 116, 0.15); color: var(--accento); display: flex; align-items: center; justify-content: center; }
+  .icona svg { width: 16px; height: 16px; }
+  .kpi .valore { font-size: 18px; margin-top: 2px; }
+  .kpi .nota { font-size: 11px; color: var(--testo-soft); }
+  .doppio { display: flex; align-items: baseline; gap: 6px; }
+  .doppio .barra { color: var(--bordo); }
+
+  /* --- Schede Rischio e Costanza ------------------------------------------- */
+  .schede { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .scheda { padding: 16px; }
+  .scheda header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .scheda h2 { margin: 0; font-size: 14px; font-weight: 500; }
+  .scheda header p { margin: 0; font-size: 12px; color: var(--testo-soft); }
+  .righe { margin: 0; }
+  .righe > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(58, 52, 43, 0.6); }
+  .righe > div:last-child { border-bottom: 0; }
+  .righe dt { color: var(--testo-soft); font-size: 13px; }
+  .righe dd { margin: 0; font-size: 14px; text-align: right; }
+  .righe dd small { display: block; font-size: 11px; color: var(--testo-soft); }
+
+  .limiti { display: flex; gap: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bordo); }
+  .limite { flex: 1; }
+  .limite .testa { display: flex; justify-content: space-between; align-items: baseline; }
+  .limite .valori { font-size: 12px; }
+  .binario { margin-top: 4px; height: 6px; border-radius: 999px; background: var(--bordo); overflow: hidden; }
+  .binario div { height: 100%; border-radius: 999px; }
+
+  .serie { display: flex; gap: 3px; margin-top: 4px; justify-content: flex-end; }
+  .serie span { width: 10px; height: 10px; border-radius: 2px; }
+
+  .nota-pagina { font-size: 11px; color: var(--testo-soft); }
+
+  /* Il telefono è secondario: basta che si legga. */
+  @media (max-width: 1024px) {
+    .riga-alta { grid-template-columns: 1fr 1fr; }
+    .riga-alta .pnl { grid-column: 1 / -1; }
+    .kpi-riga { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .nav-voci, .nav-dx span { display: none; }
+    main { padding: 1rem 1rem 2rem; }
+    .riga-alta, .schede { grid-template-columns: 1fr; }
+    .pnl { grid-template-columns: 1fr; }
+    .limiti { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-in">
+    <span class="marchio">Trading Journal</span>
+    <nav class="nav-voci">
+      <a href="#" class="attiva">Home</a>
+      <a href="#">Calendario</a>
+      <a href="#">Trade</a>
+      <a href="#">Statistiche</a>
+      <a href="#">Journal</a>
+      <a href="#">Diario</a>
+      <a href="#">Impostazioni</a>
+    </nav>
+    <div class="nav-dx">
+      <span class="soft" style="font-size:12px">utente@esempio.it</span>
+      <button class="bottone">Esci</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="avviso">Mockup statico con dati di esempio (oggi = venerdì 9 ottobre 2026, due conti Titan da 100.000 USD). I filtri e l'interruttore $ / % funzionano: i numeri si ricalcolano con le regole del journal.</p>
+
+  <!-- Filtri ---------------------------------------------------------------->
+  <section class="card filtri">
+    <div class="titolo-pagina">
+      <h1>Home</h1>
+      <span class="soft num" id="intervallo" style="font-size:12px"></span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+      <div class="gruppo" id="sel-conti"></div>
+      <span class="separatore"></span>
+      <div class="gruppo" id="sel-periodo"></div>
+      <span class="separatore"></span>
+      <div class="interruttore" id="sel-unita" role="group" aria-label="Unità">
+        <button data-u="usd" aria-pressed="true">$</button>
+        <button data-u="pct" aria-pressed="false">%</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Punteggi e P&L --------------------------------------------------------->
+  <div class="riga-alta">
+    <section class="card punteggio" id="p-processo"></section>
+    <section class="card punteggio" id="p-risultati"></section>
+
+    <section class="card pnl">
+      <div>
+        <div class="etichetta">P&amp;L del periodo</div>
+        <div class="grande num" id="pnl-grande"></div>
+        <div class="sotto num" id="pnl-sotto"></div>
+        <div class="meta num" id="pnl-meta"></div>
+      </div>
+      <div class="curva">
+        <svg id="curva" viewBox="0 0 600 130" preserveAspectRatio="none" aria-label="Curva del P&L"></svg>
+        <div class="assi num"><span id="curva-da"></span><span id="curva-a"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- KPI ------------------------------------------------------------------->
+  <dl class="kpi-riga" style="margin:0" id="kpi"></dl>
+
+  <!-- Rischio e Costanza ------------------------------------------------------>
+  <div class="schede">
+    <section class="card scheda">
+      <header>
+        <h2>Rischio</h2>
+        <p>Quanto metto in gioco e quanto vicino vado ai limiti</p>
+      </header>
+      <dl class="righe" id="rischio"></dl>
+      <div class="limiti" id="limiti"></div>
+    </section>
+
+    <section class="card scheda">
+      <header>
+        <h2>Costanza</h2>
+        <p>Giornate, non trade</p>
+      </header>
+      <dl class="righe" id="costanza"></dl>
+    </section>
+  </div>
+
+  <p class="nota-pagina">Le barre dei limiti di perdita ignorano il filtro di periodo: parlano sempre di oggi e di questa settimana, sul conto messo peggio. Le analisi complete restano in Statistiche.</p>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// Dati di esempio
+// ---------------------------------------------------------------------------
+const OGGI = '2026-10-09'
+const LUNEDI = '2026-10-05'
+const INIZIO_MESE = '2026-10-01'
+const LIMITE_GIORNO = 2
+const LIMITE_SETTIMANA = 4
+const SOGLIA_RISCHIO = 1.2
+const SOGLIA_CAMPIONE = 5
+
+const CONTI = [
+  { id: 'a', nome: 'Titan 1', saldo: 100000 },
+  { id: 'b', nome: 'Titan 2', saldo: 100000 },
+]
+
+/**
+ * T(data, ora, direzione, pnl conto 1, pnl conto 2, opzioni)
+ * pnl conto 2: undefined = uguale al conto 1, null = trade non eseguito lì.
+ * rk = rischio in USD per conto, rr = RR pianificato.
+ */
+function T(d, o, dir, pA, pB, x = {}) {
+  const rk = x.rk ?? 500
+  const rr = x.rr ?? 2
+  const ex = { a: { p: pA, rk, rr } }
+  if (pB !== null) ex.b = { p: pB === undefined ? pA : pB, rk, rr }
+  return {
+    d, o, dir, ex,
+    conf: x.conf ?? 5,
+    fin: x.fin ?? 'in',
+    sl: !!x.sl, cm: !!x.cm, ext: !!x.ext,
+  }
+}
+
+const TRADES = [
+  T('2026-09-01', '09:40', 'long', 1000),
+  T('2026-09-02', '10:15', 'short', -500, undefined, { rr: 2.5 }),
+  T('2026-09-03', '09:20', 'long', 1250, undefined, { rr: 2.5 }),
+  T('2026-09-04', '13:05', 'long', -500, undefined, { conf: 4, fin: 'out' }),
+  T('2026-09-08', '10:30', 'short', 600, undefined, { cm: true }),
+  T('2026-09-09', '09:50', 'long', 0),
+  T('2026-09-10', '09:15', 'long', 1000),
+  T('2026-09-10', '11:20', 'short', -500, undefined, { conf: 3, ext: true }),
+  T('2026-09-11', '10:00', 'long', -1400, undefined, { rk: 1400 }),
+  T('2026-09-15', '09:35', 'long', 1500, undefined, { rr: 3 }),
+  T('2026-09-16', '10:45', 'short', -500),
+  T('2026-09-17', '09:25', 'long', -500),
+  T('2026-09-17', '10:40', 'long', -400, undefined, { sl: true, conf: 4 }),
+  T('2026-09-17', '11:50', 'short', -300, undefined, { cm: true, conf: 3 }),
+  T('2026-09-22', '09:30', 'long', 1000),
+  T('2026-09-23', '09:10', 'short', 1250, undefined, { rr: 2.5 }),
+  T('2026-09-23', '11:05', 'long', 500, undefined, { cm: true }),
+  T('2026-09-24', '10:20', 'long', -500),
+  T('2026-09-29', '09:45', 'long', 1000),
+  T('2026-09-30', '10:10', 'short', -500),
+  T('2026-10-01', '09:30', 'long', 750, undefined, { cm: true }),
+  T('2026-10-02', '10:05', 'short', -500),
+  T('2026-10-05', '09:40', 'long', 1000),
+  T('2026-10-06', '10:25', 'long', 500, undefined, { cm: true }),
+  T('2026-10-07', '09:55', 'short', -500),
+  T('2026-10-08', '09:20', 'long', 1250, undefined, { rr: 2.5 }),
+  T('2026-10-09', '10:15', 'long', -400, null, { rr: 2.5 }),
+]
+
+// ---------------------------------------------------------------------------
+// Calcoli, con le stesse regole di src/lib (aggregazione per trade)
+// ---------------------------------------------------------------------------
+const media = (v) => (v.length ? v.reduce((s, x) => s + x, 0) / v.length : null)
+const somma = (v) => v.reduce((s, x) => s + x, 0)
+
+function metriche(t, sel) {
+  const ids = sel.filter((c) => t.ex[c.id])
+  if (!ids.length) return null
+  const ex = ids.map((c) => t.ex[c.id])
+  const base = somma(ids.map((c) => c.saldo))
+  const pnl = somma(ex.map((e) => e.p))
+  const rischio = somma(ex.map((e) => e.rk))
+  return {
+    pnl,
+    pct: (pnl / base) * 100,
+    r: media(ex.map((e) => e.p / e.rk)),
+    rr: media(ex.map((e) => e.rr)),
+    rischioPct: (rischio / base) * 100,
+    esito: pnl > 0 ? 'win' : pnl < 0 ? 'loss' : 'be',
+  }
+}
+
+function capitaleOperativo(trades, sel) {
+  return somma(sel.filter((c) => trades.some((t) => t.ex[c.id])).map((c) => c.saldo))
+}
+
+function punteggioProcesso(trades) {
+  if (!trades.length) return null
+  const v = trades.map((t) => {
+    const c = [
+      [0.4, t.conf / 5],
+      [0.15, t.fin === 'in' ? 1 : 0],
+      [0.15, t.sl ? 0 : 1],
+      [0.15, t.cm ? 0 : 1],
+      [0.15, t.ext ? 0 : 1],
+    ]
+    return somma(c.map(([p, x]) => p * x))
+  })
+  return media(v) * 100
+}
+
+function calcola(sel, periodo) {
+  const da = periodo === 'mese' ? INIZIO_MESE : periodo === 'settimana' ? LUNEDI : null
+  const trades = TRADES
+    .filter((t) => (!da || t.d >= da) && sel.some((c) => t.ex[c.id]))
+    .sort((x, y) => (x.d + x.o).localeCompare(y.d + y.o))
+  const m = trades.map((t) => metriche(t, sel))
+  const base = capitaleOperativo(trades, sel)
+
+  const vinti = m.filter((x) => x.esito === 'win')
+  const persi = m.filter((x) => x.esito === 'loss')
+  const lordoVinto = somma(vinti.map((x) => x.pnl))
+  const lordoPerso = Math.abs(somma(persi.map((x) => x.pnl)))
+  const pnl = somma(m.map((x) => x.pnl))
+  const sommaR = somma(m.map((x) => x.r))
+
+  // Giornate
+  const giorni = new Map()
+  trades.forEach((t, i) => {
+    const g = giorni.get(t.d) ?? { d: t.d, trades: [], pnl: 0 }
+    g.trades.push(t)
+    g.pnl += m[i].pnl
+    giorni.set(t.d, g)
+  })
+  const elenco = [...giorni.values()].map((g) => ({
+    ...g,
+    pct: (g.pnl / capitaleOperativo(g.trades, sel)) * 100,
+    n: g.trades.length,
+  }))
+  const segno = (g) => Math.sign(g.pnl)
+
+  let maxV = 0, maxP = 0, corrente = 0, segnoCorrente = 0
+  for (const g of elenco) {
+    const s = segno(g)
+    if (s !== 0 && s === segnoCorrente) corrente++
+    else { corrente = s === 0 ? 0 : 1; segnoCorrente = s }
+    if (s > 0) maxV = Math.max(maxV, corrente)
+    if (s < 0) maxP = Math.max(maxP, corrente)
+  }
+
+  const ordinati = [...elenco].sort((x, y) => y.pnl - x.pnl)
+  const migliore = ordinati[0] ?? null
+  const peggiore = ordinati.at(-1) ?? null
+
+  // Drawdown sull'equity complessiva
+  let cum = 0, picco = 0, dd = 0
+  for (const x of m) { cum += x.pnl; picco = Math.max(picco, cum); dd = Math.max(dd, picco - cum) }
+
+  // Curva per giorno
+  let c = 0
+  const curva = elenco.map((g) => ({ d: g.d, usd: (c += g.pnl) })).map((p) => ({ ...p, pct: (p.usd / base) * 100 }))
+
+  return {
+    da, trades, m, base,
+    n: trades.length,
+    pnl, pct: base ? (pnl / base) * 100 : null,
+    winRate: m.length ? (vinti.length / m.length) * 100 : null,
+    vinti: vinti.length,
+    pf: lordoPerso > 0 ? lordoVinto / lordoPerso : null,
+    expR: m.length ? sommaR / m.length : null,
+    expUsd: m.length ? pnl / m.length : null,
+    expPct: m.length ? media(m.map((x) => x.pct)) : null,
+    mediaV: { usd: media(vinti.map((x) => x.pnl)), pct: media(vinti.map((x) => x.pct)) },
+    mediaP: { usd: media(persi.map((x) => x.pnl)), pct: media(persi.map((x) => x.pct)) },
+    rischioMedio: media(m.map((x) => x.rischioPct)),
+    sopraSoglia: m.filter((x) => x.rischioPct > SOGLIA_RISCHIO).length,
+    rr: media(m.map((x) => x.rr)),
+    dd: { usd: dd, pct: base ? (dd / base) * 100 : null },
+    giornate: elenco,
+    verdi: elenco.filter((g) => g.pnl > 0).length,
+    rosse: elenco.filter((g) => g.pnl < 0).length,
+    serie: { segno: segnoCorrente, n: corrente, maxV, maxP },
+    tradeGiorno: elenco.length ? trades.length / elenco.length : null,
+    maxGiorno: Math.max(0, ...elenco.map((g) => g.n)),
+    migliore, peggiore,
+    quotaMigliore: pnl > 0 && migliore && migliore.pnl > 0 ? (migliore.pnl / pnl) * 100 : null,
+    curva,
+    processo: punteggioProcesso(trades),
+    risultati: m.length ? Math.min(100, Math.max(0, 50 + (sommaR / m.length) * 50)) : null,
+  }
+}
+
+/** Perdita di un periodo sul conto messo peggio, in % positiva. */
+function perditaPeggiore(sel, da, a) {
+  return Math.max(0, ...sel.map((c) => {
+    const netto = somma(TRADES.filter((t) => t.d >= da && t.d <= a && t.ex[c.id]).map((t) => t.ex[c.id].p))
+    return netto < 0 ? (-netto / c.saldo) * 100 : 0
+  }))
+}
+
+// ---------------------------------------------------------------------------
+// Formattazione, come src/lib/formato.ts
+// ---------------------------------------------------------------------------
+const VUOTO = '—'
+const fmt = (n, dec, segno) =>
+  n.toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec, signDisplay: segno ? 'exceptZero' : 'auto' })
+const usd = (n, segno = true) => (n == null ? VUOTO : `${fmt(n, 2, segno)} USD`)
+const usdCompatto = (n) => (n == null ? VUOTO : `${fmt(n, 0, true)} USD`)
+const pct = (n, dec = 2, segno = true) => (n == null ? VUOTO : `${fmt(n, dec, segno)}%`)
+const erre = (n) => (n == null ? VUOTO : `${fmt(n, 2, true)}R`)
+const data = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+const dataLunga = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const classe = (n) => (n == null || n === 0 ? '' : n > 0 ? 'pos' : 'neg')
+
+const COL = { positivo: '#93a181', negativo: '#c78a6b', accento: '#c79c74', bordo: '#3a342b', testoSoft: '#9b9184' }
+
+// ---------------------------------------------------------------------------
+// Disegno
+// ---------------------------------------------------------------------------
+const ICONE = {
+  bersaglio: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  bilancia: 'M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7Zm14 0-3 7a3 3 0 0 0 6 0l-3-7ZM8 21h8',
+  salita: 'M3 17l6-6 4 4 7-7M14 4h7v7',
+  battito: 'M22 12h-4l-3 9L9 3l-3 9H2',
+}
+const icona = (d) =>
+  `<span class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></span>`
+
+function anello(valore) {
+  const R = 42, C = 2 * Math.PI * R
+  const tinta = valore == null ? COL.bordo : valore >= 70 ? COL.positivo : valore >= 40 ? COL.accento : COL.negativo
+  const q = valore == null ? 0 : Math.min(1, valore / 100)
+  return `<div class="anello">
+    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="${COL.bordo}" stroke-width="8"/>
+    ${q > 0 ? `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${tinta}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${q * C} ${C}"/>` : ''}</svg>
+    <div class="centro"><span class="valore num" style="color:${tinta}">${valore == null ? VUOTO : Math.round(valore)}</span>${valore == null ? '' : '<span class="su">su 100</span>'}</div>
+  </div>`
+}
+
+function punteggio(el, titolo, spiegazione, valore, n) {
+  el.innerHTML = `${anello(valore)}<div>
+    <h3>${titolo}</h3><p>${spiegazione}</p>
+    <p class="campione num">${n} trade${n > 0 && n < SOGLIA_CAMPIONE ? `<span class="acc"> · sotto i ${SOGLIA_CAMPIONE}, poco significativo</span>` : ''}</p>
+  </div>`
+}
+
+function kpi(etichetta, iconaD, valoreHtml, nota) {
+  return `<div class="card kpi"><div class="kpi-testa"><dt class="etichetta">${etichetta}</dt>${icona(iconaD)}</div>
+    <dd style="margin:0" class="valore num">${valoreHtml}</dd>${nota ? `<p class="nota num" style="margin:0">${nota}</p>` : ''}</div>`
+}
+
+const riga = (et, val, sotto = '') => `<div><dt>${et}</dt><dd class="num">${val}${sotto ? `<small>${sotto}</small>` : ''}</dd></div>`
+
+function curva(punti, unita) {
+  const svg = document.getElementById('curva')
+  if (punti.length < 2) {
+    svg.innerHTML = `<text x="300" y="70" text-anchor="middle" fill="${COL.testoSoft}" font-size="13">Servono almeno due giornate</text>`
+    document.getElementById('curva-da').textContent = ''
+    document.getElementById('curva-a').textContent = ''
+    return
+  }
+  const W = 600, H = 130, P = 8
+  const v = [0, ...punti.map((p) => p[unita])]
+  const min = Math.min(...v), max = Math.max(...v)
+  const y = (n) => P + (H - 2 * P) * (1 - (n - min) / (max - min || 1))
+  const x = (i) => (i / (v.length - 1)) * W
+  const linea = v.map((n, i) => `${x(i).toFixed(1)},${y(n).toFixed(1)}`).join(' ')
+  const ultimo = v.at(-1)
+  const tinta = ultimo >= 0 ? COL.positivo : COL.negativo
+  svg.innerHTML = `
+    <defs><linearGradient id="riemp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${tinta}" stop-opacity="0.22"/><stop offset="1" stop-color="${tinta}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="${COL.testoSoft}" stroke-opacity="0.5" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>
+    <polygon points="0,${y(0)} ${linea} ${W},${y(0)}" fill="url(#riemp)"/>
+    <polyline points="${linea}" fill="none" stroke="${tinta}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(v.length - 1)}" cy="${y(ultimo)}" r="3.5" fill="${tinta}"/>`
+  document.getElementById('curva-da').textContent = dataLunga(punti[0].d)
+  document.getElementById('curva-a').textContent = dataLunga(punti.at(-1).d)
+}
+
+function binario(etichetta, perdita, limite) {
+  const q = limite > 0 ? perdita / limite : 0
+  const col = q >= 1 ? COL.negativo : q >= 0.8 ? COL.accento : 'rgba(155,145,132,0.4)'
+  const cls = q >= 1 ? 'neg' : q >= 0.8 ? 'acc' : 'soft'
+  return `<div class="limite"><div class="testa"><span class="etichetta">${etichetta}</span>
+    <span class="valori num ${cls}">${pct(perdita, 2, false)} / ${pct(limite, 1, false)}</span></div>
+    <div class="binario"><div style="width:${Math.min(100, q * 100)}%; background:${col}"></div></div></div>`
+}
+
+function serieQuadretti(giornate) {
+  return `<span class="serie">${giornate.slice(-10).map((g) =>
+    `<span title="${dataLunga(g.d)}" style="background:${g.pnl > 0 ? COL.positivo : g.pnl < 0 ? COL.negativo : COL.bordo}"></span>`).join('')}</span>`
+}
+
+// ---------------------------------------------------------------------------
+// Stato e filtri
+// ---------------------------------------------------------------------------
+const stato = { conto: null, periodo: 'tutto', unita: 'usd' }
+
+function pulsanti(id, voci, chiave) {
+  const el = document.getElementById(id)
+  el.innerHTML = voci.map((v) => `<button class="pill" data-v="${v.v}" aria-pressed="${stato[chiave] === v.v}">${v.e}</button>`).join('')
+  el.onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return
+    stato[chiave] = b.dataset.v === 'null' ? null : b.dataset.v
+    disegna()
+  }
+}
+
+document.getElementById('sel-unita').onclick = (e) => {
+  const b = e.target.closest('button'); if (!b) return
+  stato.unita = b.dataset.u
+  disegna()
+}
+
+function disegna() {
+  pulsanti('sel-conti', [...CONTI.map((c) => ({ v: c.id, e: c.nome })), { v: 'null', e: 'Tutti' }], 'conto')
+  document.querySelectorAll('#sel-conti button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v === 'null' ? null : b.dataset.v) === stato.conto)))
+  pulsanti('sel-periodo', [{ v: 'tutto', e: 'Tutto' }, { v: 'mese', e: 'Mese' }, { v: 'settimana', e: 'Settimana' }], 'periodo')
+  document.querySelectorAll('#sel-unita button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.u === stato.unita)))
+
+  const sel = stato.conto ? CONTI.filter((c) => c.id === stato.conto) : CONTI
+  const r = calcola(sel, stato.periodo)
+  const inUsd = stato.unita === 'usd'
+  const val = (o) => (inUsd ? usd(o.usd) : pct(o.pct))
+
+  document.getElementById('intervallo').textContent =
+    r.da ? `dal ${dataLunga(r.da)} a oggi` : r.trades.length ? `dal ${dataLunga(r.trades[0].d)} a oggi` : ''
+
+  // Punteggi
+  punteggio(document.getElementById('p-processo'), 'Processo',
+    'Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua.', r.processo, r.n)
+  punteggio(document.getElementById('p-risultati'), 'Risultati',
+    "Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade.", r.risultati, r.m.length)
+
+  // P&L
+  const grande = document.getElementById('pnl-grande')
+  grande.textContent = inUsd ? usd(r.pnl) : pct(r.pct)
+  grande.className = `grande num ${classe(r.pnl)}`
+  const sotto = document.getElementById('pnl-sotto')
+  sotto.textContent = inUsd ? pct(r.pct) : usd(r.pnl)
+  sotto.className = `sotto num ${classe(r.pnl)}`
+  document.getElementById('pnl-meta').innerHTML =
+    `${r.n} trade · ${r.giornate.length} giornate<br>su ${fmt(r.base, 0)} USD di capitale operativo`
+  curva(r.curva, stato.unita)
+
+  // KPI
+  const rapporto = r.mediaV.usd != null && r.mediaP.usd ? r.mediaV.usd / Math.abs(r.mediaP.usd) : null
+  document.getElementById('kpi').innerHTML = [
+    kpi('Win rate', ICONE.bersaglio, r.winRate == null ? VUOTO : pct(r.winRate, 0, false), `${r.vinti} su ${r.m.length} conclusi`),
+    kpi('Profit factor', ICONE.bilancia, r.pf == null ? VUOTO : fmt(r.pf, 2), r.pf == null && r.m.length ? 'nessuna perdita' : 'vinto lordo ÷ perso lordo'),
+    kpi('Expectancy', ICONE.salita, `<span class="${classe(r.expR)}">${erre(r.expR)}</span>`,
+      `${inUsd ? usd(r.expUsd) : pct(r.expPct)} per trade`),
+    kpi('Media vincita / perdita', ICONE.battito,
+      `<span class="doppio"><span class="pos">${val(r.mediaV)}</span><span class="barra">/</span><span class="neg">${val(r.mediaP)}</span></span>`,
+      rapporto == null ? undefined : `rapporto ${fmt(rapporto, 2)}`),
+  ].join('')
+
+  // Rischio
+  document.getElementById('rischio').innerHTML = [
+    riga('Rischio medio per trade',
+      `<span class="${r.rischioMedio > SOGLIA_RISCHIO ? 'neg' : ''}">${pct(r.rischioMedio, 2, false)}</span>`,
+      `soglia ${pct(SOGLIA_RISCHIO, 1, false)}`),
+    riga('Trade sopra soglia',
+      `<span class="${r.sopraSoglia ? 'neg' : ''}">${r.sopraSoglia}</span>`,
+      r.m.length ? `su ${r.m.length} conclusi` : ''),
+    riga('R:R pianificato medio', r.rr == null ? VUOTO : `1:${fmt(r.rr, 2)}`, 'al momento dell\'entrata'),
+    riga('Perdita media', `<span class="neg">${val(r.mediaP)}</span>`),
+    riga('Drawdown massimo', `<span class="${r.dd.usd > 0 ? 'neg' : ''}">${inUsd ? usd(-r.dd.usd) : pct(-r.dd.pct)}</span>`,
+      inUsd ? pct(r.dd.pct, 2, false) + ' del capitale' : usd(-r.dd.usd)),
+  ].join('')
+
+  const attivi = sel
+  document.getElementById('limiti').innerHTML =
+    binario('Perdita oggi', perditaPeggiore(attivi, OGGI, OGGI), LIMITE_GIORNO) +
+    binario('Perdita settimana', perditaPeggiore(attivi, LUNEDI, OGGI), LIMITE_SETTIMANA)
+
+  // Costanza
+  const s = r.serie
+  const serieAttuale = s.n === 0 ? VUOTO
+    : `<span class="${s.segno > 0 ? 'pos' : 'neg'}">${s.n} ${s.segno > 0 ? (s.n === 1 ? 'verde' : 'verdi') : (s.n === 1 ? 'rossa' : 'rosse')}</span>`
+  const giorno = (g) => g == null ? VUOTO
+    : `<span class="${classe(g.pnl)}">${inUsd ? usdCompatto(g.pnl) : pct(g.pct)}</span>`
+  document.getElementById('costanza').innerHTML = [
+    riga('Giornate in utile',
+      r.giornate.length ? `${r.verdi} su ${r.giornate.length} <span class="soft">(${pct((r.verdi / r.giornate.length) * 100, 0, false)})</span>` : VUOTO,
+      `${r.rosse} in perdita`),
+    riga('Serie attuale', serieAttuale, serieQuadretti(r.giornate)),
+    riga('Serie più lunga', `<span class="pos">${s.maxV} verdi</span> <span class="soft">·</span> <span class="neg">${s.maxP} rosse</span>`),
+    riga('Trade al giorno', r.tradeGiorno == null ? VUOTO : fmt(r.tradeGiorno, 1), `massimo ${r.maxGiorno} in una giornata`),
+    riga('Giorno migliore', giorno(r.migliore), r.migliore ? data(r.migliore.d) : ''),
+    riga('Giorno peggiore', giorno(r.peggiore), r.peggiore ? data(r.peggiore.d) : ''),
+    riga('Peso del giorno migliore',
+      r.quotaMigliore == null ? VUOTO : pct(r.quotaMigliore, 0, false),
+      r.quotaMigliore == null ? 'serve un profitto positivo' : 'del profitto del periodo'),
+  ].join('')
+}
+
+disegna()
+</script>
+</body>
+</html>
