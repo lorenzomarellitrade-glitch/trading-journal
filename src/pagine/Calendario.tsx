@@ -4,13 +4,19 @@ import {
   consumoRischio,
   giornateVinteEPerse,
   intensita,
-  metricheTrade,
   perditaPeggiorePercent,
   raggruppaPerGiorno,
   riepiloga,
 } from '../lib/aggregazioni'
 import { contaConferme, CONFERME_TOTALI } from '../lib/calcoli'
-import { caricaAccount, caricaImpostazioni, caricaTrades, IMPOSTAZIONI_DEFAULT } from '../lib/dati'
+import {
+  caricaAccount,
+  caricaImpostazioni,
+  caricaPagineDiario,
+  caricaTrades,
+  IMPOSTAZIONI_DEFAULT,
+} from '../lib/dati'
+import { punteggioProcesso } from '../lib/statistiche'
 import {
   etichettaMese,
   grigliaMese,
@@ -23,17 +29,16 @@ import {
 import {
   formattaData,
   formattaPercent,
-  formattaR,
   formattaUsd,
   formattaUsdCompatto,
   oggiIso,
-  oraBreve,
   VUOTO,
 } from '../lib/formato'
 import { velato } from '../lib/colori'
 import { statoConti } from '../lib/obiettivi'
-import type { Account, TradeCompleto } from '../lib/tipi'
+import type { Account, PaginaDiario, TradeCompleto } from '../lib/tipi'
 import BarraRischio from '../componenti/BarraRischio'
+import ElencoTradeGiorno from '../componenti/ElencoTradeGiorno'
 import StatoConti from '../componenti/StatoConti'
 import SelettoreAccount, {
   accountSelezionati,
@@ -79,6 +84,8 @@ interface DatiGiorno {
   pnl: number | null
   percent: number | null
   numero: number
+  /** Trade del giorno con tutte e cinque le conferme */
+  completi: number
 }
 
 export default function Calendario() {
@@ -151,7 +158,12 @@ export default function Calendario() {
 
       const r = riepiloga(delGiorno, selezionati)
       const pnl = r.numeroChiusi > 0 ? r.pnlUsd : null
-      mappa.set(casella.iso, { pnl, numero: delGiorno.length, percent: r.pnlPercent })
+      mappa.set(casella.iso, {
+        pnl,
+        numero: delGiorno.length,
+        percent: r.pnlPercent,
+        completi: delGiorno.filter((t) => contaConferme(t) === CONFERME_TOTALI).length,
+      })
       if (pnl != null) massimo = Math.max(massimo, Math.abs(pnl))
     }
 
@@ -168,6 +180,30 @@ export default function Calendario() {
     () => riepiloga(tradesDelMese, selezionati),
     [tradesDelMese, selezionati],
   )
+  /** Il punteggio Processo del mese, sui soli trade dei conti selezionati. */
+  const processoMese = useMemo(() => {
+    const ids = new Set(selezionati.map((a) => a.id))
+    return punteggioProcesso(
+      tradesDelMese.filter((t) => (t.executions ?? []).some((e) => ids.has(e.account_id))),
+    )
+  }, [tradesDelMese, selezionati])
+
+  /** Le pagine di diario del mese, per il collegamento dal pannello del giorno. */
+  const [pagineDiario, setPagineDiario] = useState<PaginaDiario[]>([])
+  useEffect(() => {
+    let annullato = false
+    caricaPagineDiario(primoDelMese(anno, mese), ultimoDelMese(anno, mese))
+      .then((p) => {
+        if (!annullato) setPagineDiario(p)
+      })
+      // Il diario è un di più: se non si carica, il calendario resta utilizzabile.
+      .catch(() => {
+        if (!annullato) setPagineDiario([])
+      })
+    return () => {
+      annullato = true
+    }
+  }, [anno, mese])
   const giornate = useMemo(
     () => giornateVinteEPerse(tradesDelMese, selezionati),
     [tradesDelMese, selezionati],
@@ -266,7 +302,7 @@ export default function Calendario() {
       <div className="grid gap-4 lg:grid-cols-[1fr_17rem]">
         {/* --- Riepilogo del mese ----------------------------------------- */}
         <aside className="space-y-4 lg:order-2">
-          <div className="rounded-card border border-bordo bg-superficie p-4">
+          <div className="riquadro p-4">
             <dl className="grid grid-cols-2 gap-4 lg:grid-cols-1">
               <Voce
                 etichetta="P&L mese"
@@ -289,6 +325,22 @@ export default function Calendario() {
                 classe={classeSegno(
                   riepilogoMese.numeroChiusi > 0 ? riepilogoMese.pnlUsd : null,
                 )}
+              />
+              {/* Il processo prima dei numeri di risultato, come nella Home. */}
+              <Voce
+                etichetta="Processo"
+                valore={
+                  processoMese.valore == null ? VUOTO : `${Math.round(processoMese.valore)}/100`
+                }
+                classe={
+                  processoMese.valore == null
+                    ? 'text-testo'
+                    : processoMese.valore >= 70
+                      ? 'text-positivo'
+                      : processoMese.valore >= 40
+                        ? 'text-accento'
+                        : 'text-negativo'
+                }
               />
               <Voce etichetta="Trade" valore={String(riepilogoMese.numeroTrade)} />
               <Voce
@@ -318,7 +370,7 @@ export default function Calendario() {
         </aside>
 
         {/* --- Griglia mensile -------------------------------------------- */}
-        <div className="rounded-card border border-bordo bg-superficie p-2 sm:p-4 lg:order-1">
+        <div className="riquadro p-2 sm:p-4 lg:order-1">
           <div className="grid grid-cols-[repeat(7,1fr)_3.5rem] gap-1 sm:gap-2">
             {NOMI_GIORNI.map((g) => (
               <div
@@ -359,6 +411,7 @@ export default function Calendario() {
           iso={giornoAperto}
           trades={perGiorno.get(giornoAperto) ?? []}
           account={selezionati}
+          pagina={pagineDiario.find((p) => p.data === giornoAperto) ?? null}
           onChiudi={() => setGiornoAperto(null)}
         />
       )}
@@ -432,6 +485,15 @@ function SettimanaRiga({
                 <span className="num block text-[10px] text-testo-soft">
                   {dati.numero} trade
                 </span>
+                {/* Quanti trade del giorno avevano tutte e cinque le conferme. */}
+                <span
+                  title={`${dati.completi} trade su ${dati.numero} con 5 conferme su 5`}
+                  className={`num hidden text-[10px] sm:block ${
+                    dati.completi === dati.numero ? 'text-positivo' : 'text-testo-soft'
+                  }`}
+                >
+                  ✓ {dati.completi}/{dati.numero} a 5/5
+                </span>
               </span>
             )}
           </button>
@@ -497,18 +559,38 @@ function PannelloGiorno({
   iso,
   trades,
   account,
+  pagina,
   onChiudi,
 }: {
   iso: string
   trades: TradeCompleto[]
   account: Account[]
+  /** La pagina di diario di quel giorno, se esiste */
+  pagina: PaginaDiario | null
   onChiudi: () => void
 }) {
+  const r = riepiloga(trades, account)
+
   return (
-    <div className="rounded-card border border-accento bg-superficie p-4">
-      <header className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium">{formattaData(iso)}</h2>
+    <div className="riquadro border-accento p-4">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-sm font-medium capitalize">{formattaData(iso)}</h2>
+          {r.numeroChiusi > 0 && (
+            <span className={`num text-sm ${classeSegno(r.pnlUsd)}`}>
+              {formattaUsd(r.pnlUsd, true)}
+              <span className="ml-2 text-xs">{formattaPercent(r.pnlPercent, 2, true)}</span>
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          {/* Il collegamento con il diario: il piano di quel giorno, o una pagina nuova. */}
+          <Link
+            to={pagina ? `/diario/${pagina.id}` : `/diario/nuova?data=${iso}`}
+            className="rounded-md border border-bordo px-3 py-1.5 text-xs text-testo-soft transition-colors hover:text-testo"
+          >
+            {pagina ? 'Diario del giorno' : 'Scrivi nel diario'}
+          </Link>
           <Link
             to={`/trade/nuovo?data=${iso}`}
             className="rounded-md bg-accento px-3 py-1.5 text-xs font-medium text-superficie transition-opacity hover:opacity-90"
@@ -525,42 +607,7 @@ function PannelloGiorno({
         </div>
       </header>
 
-      <ul className="divide-y divide-bordo">
-        {trades.map((t) => {
-          const m = metricheTrade(t, account)
-          const conferme = contaConferme(t)
-
-          return (
-            <li key={t.id}>
-              <Link
-                to={`/trade/${t.id}`}
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 transition-colors hover:text-accento"
-              >
-                <span className="num w-12 text-xs text-testo-soft">
-                  {oraBreve(t.ora_entrata) || VUOTO}
-                </span>
-                <span className="w-12 text-xs uppercase tracking-wide text-testo-soft">
-                  {t.direzione}
-                </span>
-                <span
-                  className={`num w-10 text-xs ${
-                    conferme === CONFERME_TOTALI ? 'text-positivo' : 'text-testo-soft'
-                  }`}
-                >
-                  {conferme}/{CONFERME_TOTALI}
-                </span>
-                <span className={`num w-24 text-sm ${classeSegno(m.pnlUsd)}`}>
-                  {m.pnlUsd == null ? VUOTO : formattaUsd(m.pnlUsd, true)}
-                </span>
-                <span className={`num w-16 text-sm ${classeSegno(m.rMedio)}`}>
-                  {formattaR(m.rMedio)}
-                </span>
-                <span className="text-xs text-testo-soft">{t.finestra ?? ''}</span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+      <ElencoTradeGiorno trades={trades} account={account} />
     </div>
   )
 }

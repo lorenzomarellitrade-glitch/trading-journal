@@ -22,6 +22,7 @@ export const DIREZIONI: Direzione[] = ['long', 'short']
 export const FINESTRE: Finestra[] = ['09:00-12:00', 'fuori finestra']
 export const BIAS: Bias[] = ['rialzista', 'ribassista', 'laterale']
 export const ESITI: Esito[] = ['win', 'loss', 'breakeven', 'annullato']
+export const NUMERI_FR: NumeroFR[] = ['primo', 'secondo']
 
 /** I canali del journal emotivo. La configurazione sta in lib/journal.ts. */
 export type Canale = 'visione' | 'tp' | 'stop' | 'be' | 'miss' | 'stato-mentale'

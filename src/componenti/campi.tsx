@@ -15,7 +15,7 @@ export function Sezione({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4 md:p-5">
+    <section className="riquadro p-4 md:p-5">
       <header className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium tracking-tight text-testo">{titolo}</h2>
         {azione}
