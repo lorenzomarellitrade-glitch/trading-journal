@@ -47,7 +47,8 @@ const CLASSI_INPUT =
   'mt-0.5 w-full rounded-md border border-bordo bg-sfondo px-2.5 py-2 text-sm text-testo ' +
   'placeholder:text-testo-soft/60 disabled:opacity-50'
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+/** Con React 19 `ref` è una prop qualsiasi: arriva all'input insieme alle altre. */
+export function Input(props: React.ComponentProps<'input'>) {
   const { className = '', ...resto } = props
   return <input {...resto} className={`${CLASSI_INPUT} ${className}`} />
 }
