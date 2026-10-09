@@ -1,5 +1,5 @@
 import type { StatoConto } from '../lib/obiettivi'
-import { COLORI } from '../lib/colori'
+import { TOKEN } from '../lib/colori'
 import { formattaPercent, formattaUsd } from '../lib/formato'
 import Anello from './Anello'
 
@@ -25,9 +25,9 @@ function classeSegno(n: number): string {
 
 /** Colore di un anello che misura il consumo di un limite: più è pieno, peggio è. */
 function coloreLimite(quota: number): string {
-  if (quota >= 1) return COLORI.negativo
-  if (quota >= QUOTA_ATTENZIONE) return COLORI.accento
-  return COLORI.testoSoft
+  if (quota >= 1) return TOKEN.negativo
+  if (quota >= QUOTA_ATTENZIONE) return TOKEN.accento
+  return TOKEN.testoSoft
 }
 
 function Misura({
@@ -81,7 +81,7 @@ function Conto({ stato }: { stato: StatoConto }) {
           {targetPercent != null && quotaTarget != null && (
             <Misura
               quota={quotaTarget}
-              colore={quotaTarget >= 1 ? COLORI.positivo : COLORI.accento}
+              colore={quotaTarget >= 1 ? TOKEN.positivo : TOKEN.accento}
               valore={`${Math.round(quotaTarget * 100)}%`}
               classeValore={quotaTarget >= 1 ? 'text-positivo' : 'text-testo'}
               etichetta={`del target ${formattaPercent(targetPercent, 0)}`}
@@ -128,7 +128,7 @@ export default function StatoConti({ stati }: { stati: StatoConto[] }) {
   if (stati.length === 0) return null
 
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro p-4">
       <header className="mb-3">
         <h2 className="text-sm font-medium text-testo">Stato dei conti</h2>
         <p className="text-xs text-testo-soft">

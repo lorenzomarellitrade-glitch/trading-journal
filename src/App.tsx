@@ -3,13 +3,14 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProviderAuth, useAuth } from './auth/AuthContext'
 import Navigazione from './componenti/Navigazione'
 import Login from './pagine/Login'
-import Calendario from './pagine/Calendario'
+import Home from './pagine/Home'
 
 /**
- * Il calendario è la schermata iniziale e resta nel bundle principale.
+ * La Home è la schermata iniziale e resta nel bundle principale.
  * Le altre si caricano solo quando servono: le statistiche in particolare
  * portano con sé Recharts, che da solo pesa più di tutto il resto dell'app.
  */
+const Calendario = lazy(() => import('./pagine/Calendario'))
 const ListaTrade = lazy(() => import('./pagine/ListaTrade'))
 const Statistiche = lazy(() => import('./pagine/Statistiche'))
 const ImpostazioniPagina = lazy(() => import('./pagine/Impostazioni'))
@@ -48,6 +49,7 @@ function AppAutenticata() {
       <main className="mx-auto max-w-7xl px-4 pb-20 pt-4 md:px-6 md:pb-10 md:pt-6">
         <Suspense fallback={<Attesa />}>
           <Routes>
+            <Route path="/home" element={<Home />} />
             <Route path="/calendario" element={<Calendario />} />
             <Route path="/trade" element={<ListaTrade />} />
             {/* Cliccando un trade, da lista o calendario, si apre il resoconto;
@@ -63,7 +65,7 @@ function AppAutenticata() {
             <Route path="/diario/nuova" element={<PaginaDiario />} />
             <Route path="/diario/:id" element={<PaginaDiario />} />
             <Route path="/impostazioni" element={<ImpostazioniPagina />} />
-            <Route path="*" element={<Navigate to="/calendario" replace />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </Suspense>
       </main>

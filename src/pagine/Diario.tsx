@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { caricaPagineDiario } from '../lib/dati'
+import { raggruppaPerGiorno } from '../lib/aggregazioni'
+import { caricaAccount, caricaPagineDiario, caricaTrades } from '../lib/dati'
 import { primoDelMese, ultimoDelMese } from '../lib/date'
 import { ETICHETTA_STATO, etichettaPiano, statoPagina, type StatoPagina } from '../lib/diario'
 import { formattaDataEstesa, oggiIso } from '../lib/formato'
-import type { PaginaDiario } from '../lib/tipi'
+import { riassuntoGiorno } from '../lib/giorno'
+import type { Account, PaginaDiario, TradeCompleto } from '../lib/tipi'
+import RiassuntoGiornoChip from '../componenti/RiassuntoGiornoChip'
 import SchedeDiario from '../componenti/SchedeDiario'
 import SelettoreMese, { chiaveMese, daChiave } from '../componenti/SelettoreMese'
 
@@ -22,6 +25,9 @@ export default function Diario() {
   const [pagine, setPagine] = useState<PaginaDiario[]>([])
   const [caricamento, setCaricamento] = useState(true)
   const [errore, setErrore] = useState<string | null>(null)
+  /** I trade del mese, per il riassunto accanto a ogni pagina. */
+  const [trades, setTrades] = useState<TradeCompleto[]>([])
+  const [conti, setConti] = useState<Account[]>([])
 
   useEffect(() => {
     let annullato = false
@@ -29,7 +35,9 @@ export default function Diario() {
 
     setCaricamento(true)
     setErrore(null)
-    caricaPagineDiario(primoDelMese(anno, m), ultimoDelMese(anno, m))
+    const da = primoDelMese(anno, m)
+    const a = ultimoDelMese(anno, m)
+    caricaPagineDiario(da, a)
       .then((p) => {
         if (!annullato) setPagine(p)
       })
@@ -40,10 +48,23 @@ export default function Diario() {
         if (!annullato) setCaricamento(false)
       })
 
+    // I trade sono un di più: se non arrivano, l'elenco resta utilizzabile.
+    Promise.all([caricaTrades(da, a), caricaAccount()])
+      .then(([t, acc]) => {
+        if (annullato) return
+        setTrades(t)
+        setConti(acc)
+      })
+      .catch(() => {
+        if (!annullato) setTrades([])
+      })
+
     return () => {
       annullato = true
     }
   }, [mese])
+
+  const perData = useMemo(() => raggruppaPerGiorno(trades), [trades])
 
   return (
     <div className="space-y-4">
@@ -73,7 +94,7 @@ export default function Diario() {
       {caricamento ? (
         <p className="text-sm text-testo-soft">Caricamento…</p>
       ) : pagine.length === 0 ? (
-        <p className="rounded-card border border-bordo bg-superficie px-4 py-8 text-center text-sm text-testo-soft">
+        <p className="riquadro px-4 py-8 text-center text-sm text-testo-soft">
           Nessuna pagina in questo mese. Comincia dal piano, prima di entrare.
         </p>
       ) : (
@@ -84,12 +105,15 @@ export default function Diario() {
               <li key={p.id}>
                 <Link
                   to={`/diario/${p.id}`}
-                  className="block rounded-card border border-bordo bg-superficie p-4 transition-colors hover:border-accento"
+                  className="riquadro block p-4 transition-colors hover:border-accento"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium capitalize text-testo">
                       {formattaDataEstesa(p.data)}
                     </span>
+                    {perData.has(p.data) && (
+                      <RiassuntoGiornoChip r={riassuntoGiorno(perData.get(p.data)!, conti)} />
+                    )}
                     {(p.strumento || p.time_frame) && (
                       <span className="num text-xs text-testo-soft">
                         {[p.strumento, p.time_frame].filter(Boolean).join(' · ')}

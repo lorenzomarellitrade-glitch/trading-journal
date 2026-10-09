@@ -1,29 +1,78 @@
 @import 'tailwindcss';
 
 /* ---------------------------------------------------------------------------
-   Palette terra su fondo scuro, deliberatamente a bassa carica emotiva.
-   Definita come token Tailwind v4: ogni token genera le utility corrispondenti
-   (bg-sfondo, text-testo, border-bordo, ...).
+   Tre temi scuri, scelti in riferimenti/ricerca-colori.md e provati in
+   riferimenti/mockup-home-varianti.html. Il tema si attiva con data-theme
+   sull'elemento <html> (lo imposta lo script in index.html prima di React).
 
-   I toni sono gli stessi di prima — oliva per gli utili, mattone per le
-   perdite, terra per l'interattivo — schiariti quanto basta a restare
-   leggibili sul nero. Nessun verde o rosso acceso: il colore serve a
-   distinguere, non a far esultare o disperare.
+   I token sono quelli di Tailwind v4: ogni token genera le utility
+   corrispondenti (bg-sfondo, text-testo, border-bordo, ...). Le utility
+   leggono la variabile a runtime, quindi basta ridefinirla per tema.
 
-   Il fondo non è nero puro ma un bruno molto scuro: il nero assoluto contro
-   testo chiaro crea un contrasto che stanca nelle letture lunghe.
+   Regole comuni a tutti i temi:
+   - il profitto è più chiaro della perdita: si distinguono per luminosità,
+     non solo per tinta, anche per chi confonde rosso e verde;
+   - testi colorati almeno 4.5:1 sulla superficie delle card, linee dei
+     grafici (serie-a, serie-b) almeno 3:1;
+   - testo mai bianco pieno, sfondo mai nero puro.
+
+   Il predefinito, Freddo, sta in @theme. Se cambi un colore di sfondo,
+   aggiorna anche la mappa nello script di index.html (c'è un test).
+
+   `static`: Tailwind emette tutte le variabili anche se nessuna classe le usa.
+   Servono a Recharts, che le legge da JavaScript (lib/colori.ts).
    --------------------------------------------------------------------------- */
-@theme {
-  --color-sfondo: #17150f;
-  --color-superficie: #211e18;
-  --color-testo: #ece5d9;
-  --color-testo-soft: #9b9184;
-  --color-positivo: #93a181;
-  --color-negativo: #c78a6b;
-  --color-accento: #c79c74;
-  --color-bordo: #3a342b;
+@theme static {
+  /* Freddo: quasi nero bluastro, profitto azzurro, perdita arancio. */
+  --color-sfondo: #090b0f;
+  --color-superficie: #10141a;
+  --color-bordo: #232a34;
+  --color-testo: #e6ebf2;
+  --color-testo-soft: #97a2b0;
+  --color-positivo: #9ad6f7;
+  --color-negativo: #de8448;
+  --color-accento: #a9a6f2;
+  /* Linee neutre dei grafici a più serie */
+  --color-serie-a: #8794a6;
+  --color-serie-b: #6b7789;
+  /* Ombra delle card: più scura dello sfondo, usata solo con trasparenza */
+  --color-ombra: #000000;
 
   --radius-card: 0.5rem;
+}
+
+/* Grafite: grigio neutro, verde acqua contro corallo, accento grigio chiaro. */
+:root[data-theme='grafite'] {
+  --color-sfondo: #0b0b0c;
+  --color-superficie: #141416;
+  --color-bordo: #2a2a2e;
+  --color-testo: #e9e9ec;
+  --color-testo-soft: #a1a1a8;
+  --color-positivo: #8fd1b5;
+  --color-negativo: #d9825f;
+  --color-accento: #c9c9cf;
+  --color-serie-a: #8a8a92;
+  --color-serie-b: #6c6c74;
+  --color-ombra: #000000;
+}
+
+/* Notte: praticamente nero, card staccate dal bordo, acquamarina contro arancio. */
+:root[data-theme='notte'] {
+  --color-sfondo: #010101;
+  --color-superficie: #060607;
+  --color-bordo: #1c1c20;
+  --color-testo: #dcdce0;
+  --color-testo-soft: #94949c;
+  --color-positivo: #86d8d0;
+  --color-negativo: #d9773f;
+  --color-accento: #b8b8bf;
+  --color-serie-a: #85858d;
+  --color-serie-b: #67676f;
+  --color-ombra: #000000;
+}
+
+:root {
+  color-scheme: dark;
 }
 
 @layer base {
@@ -47,6 +96,41 @@
   /* Anello di focus coerente su tutti gli elementi interattivi. */
   :where(a, button, input, select, textarea):focus-visible {
     @apply outline-none ring-2 ring-accento/60 ring-offset-1 ring-offset-sfondo;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Rilievo delle card, uguale nei tre temi perché fatto solo di token: un filo
+   di luce sul bordo alto (il testo al 6%) e un'ombra morbida. Come fa Linear,
+   l'elevazione nasce da opacità di chiaro e scuro, non da colori nuovi.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .riquadro {
+    border: 1px solid var(--color-bordo);
+    border-radius: var(--radius-card);
+    background-color: var(--color-superficie);
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in srgb, var(--color-testo) 6%, transparent),
+      0 1px 2px 0 color-mix(in srgb, var(--color-ombra) 40%, transparent),
+      0 16px 32px -20px color-mix(in srgb, var(--color-ombra) 70%, transparent);
+  }
+
+  /* Alone leggerissimo del colore del risultato, dall'angolo in alto a
+     sinistra: dice utile o perdita prima ancora di leggere il numero. Al 9%
+     non tocca il contrasto del testo sopra. */
+  .alone-positivo {
+    background-image: radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--color-positivo) 9%, transparent),
+      transparent 65%
+    );
+  }
+  .alone-negativo {
+    background-image: radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--color-negativo) 9%, transparent),
+      transparent 65%
+    );
   }
 }
 

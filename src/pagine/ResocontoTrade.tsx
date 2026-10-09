@@ -6,6 +6,7 @@ import {
   caricaAccount,
   caricaImpostazioni,
   caricaTrade,
+  caricaTrades,
   IMPOSTAZIONI_DEFAULT,
 } from '../lib/dati'
 import {
@@ -17,6 +18,8 @@ import {
   oraBreve,
   VUOTO,
 } from '../lib/formato'
+import { verificheProcesso } from '../lib/processo'
+import { punteggioProcesso } from '../lib/statistiche'
 import { immagineSnapshot } from '../lib/tradingview'
 import {
   CAMPI_LINK,
@@ -28,6 +31,7 @@ import {
 } from '../lib/tipi'
 import { Sezione } from '../componenti/campi'
 import RiepilogoMetriche from '../componenti/RiepilogoMetriche'
+import VerificheProcesso from '../componenti/VerificheProcesso'
 
 /**
  * Resoconto di un trade in sola lettura: com'era il mercato, cosa diceva la
@@ -144,6 +148,11 @@ export default function ResocontoTrade() {
   const [account, setAccount] = useState<Account[]>([])
   const [soglia, setSoglia] = useState(IMPOSTAZIONI_DEFAULT.soglia_rischio_trade_percent)
   const [ingrandita, setIngrandita] = useState<string | null>(null)
+  /** Trade prima e dopo questo, in ordine di data e ora: per ripassare una giornata. */
+  const [vicini, setVicini] = useState<{ prec: string | null; succ: string | null }>({
+    prec: null,
+    succ: null,
+  })
 
   const [caricamento, setCaricamento] = useState(true)
   const [errore, setErrore] = useState<string | null>(null)
@@ -154,8 +163,22 @@ export default function ResocontoTrade() {
     async function carica() {
       if (!id) return
       try {
-        const [t, a, imp] = await Promise.all([caricaTrade(id), caricaAccount(), caricaImpostazioni()])
+        const [t, a, imp, tutti] = await Promise.all([
+          caricaTrade(id),
+          caricaAccount(),
+          caricaImpostazioni(),
+          caricaTrades(),
+        ])
         if (annullato) return
+
+        const chiave = (x: { data: string; ora_entrata: string | null }) =>
+          `${x.data} ${x.ora_entrata ?? ''}`
+        const ordinati = [...tutti].sort((x, y) => chiave(x).localeCompare(chiave(y)))
+        const i = ordinati.findIndex((x) => x.id === id)
+        setVicini({
+          prec: i > 0 ? ordinati[i - 1].id : null,
+          succ: i >= 0 && i < ordinati.length - 1 ? ordinati[i + 1].id : null,
+        })
         if (!t) setErrore('Trade non trovato.')
         setTrade(t)
         setAccount(a)
@@ -172,6 +195,20 @@ export default function ResocontoTrade() {
       annullato = true
     }
   }, [id])
+
+  /** Le frecce ← → passano al trade precedente o successivo, se non si sta scrivendo. */
+  useEffect(() => {
+    function suTasto(e: KeyboardEvent) {
+      if (ingrandita || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return
+      const destinazione =
+        e.key === 'ArrowLeft' ? vicini.prec : e.key === 'ArrowRight' ? vicini.succ : null
+      if (destinazione) navigate(`/trade/${destinazione}`, { replace: true })
+    }
+    window.addEventListener('keydown', suTasto)
+    return () => window.removeEventListener('keydown', suTasto)
+  }, [vicini, ingrandita, navigate])
 
   function indietro() {
     // Se la pagina è stata aperta da un link diretto non c'è una pagina
@@ -207,6 +244,7 @@ export default function ResocontoTrade() {
     return link ? [{ campo: c.campo, etichetta: c.etichetta, link }] : []
   })
   const flagAttivi = FLAG_COMPORTAMENTALI.filter((f) => trade[f.campo])
+  const processo = punteggioProcesso([trade]).valore
 
   return (
     <div className="space-y-4">
@@ -218,15 +256,41 @@ export default function ResocontoTrade() {
         >
           ← Indietro
         </button>
-        <Link
-          to={`/trade/${trade.id}/modifica`}
-          className="rounded-md border border-accento px-4 py-1.5 text-sm text-accento transition-opacity hover:opacity-80"
-        >
-          Modifica
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex" role="group" aria-label="Scorri i trade">
+            <Link
+              to={vicini.prec ? `/trade/${vicini.prec}` : '#'}
+              replace
+              aria-disabled={!vicini.prec}
+              title="Trade precedente (←)"
+              className={`rounded-l-md border border-bordo px-3 py-1.5 text-sm transition-colors ${
+                vicini.prec ? 'text-testo-soft hover:text-testo' : 'pointer-events-none text-testo-soft/40'
+              }`}
+            >
+              ← Prec.
+            </Link>
+            <Link
+              to={vicini.succ ? `/trade/${vicini.succ}` : '#'}
+              replace
+              aria-disabled={!vicini.succ}
+              title="Trade successivo (→)"
+              className={`-ml-px rounded-r-md border border-bordo px-3 py-1.5 text-sm transition-colors ${
+                vicini.succ ? 'text-testo-soft hover:text-testo' : 'pointer-events-none text-testo-soft/40'
+              }`}
+            >
+              Succ. →
+            </Link>
+          </div>
+          <Link
+            to={`/trade/${trade.id}/modifica`}
+            className="rounded-md border border-accento px-4 py-1.5 text-sm text-accento transition-opacity hover:opacity-80"
+          >
+            Modifica
+          </Link>
+        </div>
       </div>
 
-      <header className="rounded-card border border-bordo bg-superficie p-4">
+      <header className="riquadro p-4">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="text-xl font-medium tracking-tight">
             {trade.direzione === 'long' ? 'Long' : 'Short'}
@@ -265,6 +329,21 @@ export default function ResocontoTrade() {
           </Voce>
         </dl>
       </header>
+
+      {/* --- Processo, prima di mercato e prezzi ---------------------------- */}
+      <Sezione
+        titolo="Processo"
+        azione={
+          <span className="num text-xs text-testo-soft">
+            <span className="text-sm text-testo">
+              {processo == null ? VUOTO : Math.round(processo)}
+            </span>
+            /100
+          </span>
+        }
+      >
+        <VerificheProcesso verifiche={verificheProcesso(trade)} />
+      </Sezione>
 
       {/* --- Mercato e checklist ------------------------------------------ */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -328,6 +407,11 @@ export default function ResocontoTrade() {
                   <span className={presente ? 'text-testo' : 'text-testo-soft line-through'}>
                     {s.etichetta}
                   </span>
+                  {s.campo === 'step5_fallimento_rottura' && trade.numero_fr && (
+                    <span className="rounded border border-bordo px-1.5 py-0.5 text-[11px] text-testo-soft">
+                      {trade.numero_fr === 'primo' ? 'Prima F+R' : 'Seconda F+R'}
+                    </span>
+                  )}
                   <span className="sr-only">{presente ? 'presente' : 'assente'}</span>
                 </li>
               )

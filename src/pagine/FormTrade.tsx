@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { calcolaMetriche, CONFERME_TOTALI, contaConferme } from '../lib/calcoli'
 import {
@@ -18,6 +18,8 @@ import {
   testoInDigitazione,
   testoPulito,
 } from '../lib/formato'
+import { finestraDaOra, verificheProcesso } from '../lib/processo'
+import { punteggioProcesso } from '../lib/statistiche'
 import {
   BIAS,
   CAMPI_LINK,
@@ -25,13 +27,16 @@ import {
   ESITI,
   FINESTRE,
   FLAG_COMPORTAMENTALI,
+  NUMERI_FR,
   STEP_CHECKLIST,
   type Account,
   type Esito,
   type Trade,
+  type TradeCompleto,
 } from '../lib/tipi'
 import { Campo, Casella, Conferma, GruppoOpzioni, Input, InputNumero, Sezione } from '../componenti/campi'
 import RiepilogoMetriche from '../componenti/RiepilogoMetriche'
+import VerificheProcesso from '../componenti/VerificheProcesso'
 
 /** Campi di una execution mentre si digita: stringhe, non numeri. */
 interface BozzaCampi {
@@ -117,6 +122,11 @@ export default function FormTrade() {
   const [salvataggio, setSalvataggio] = useState(false)
   const [errore, setErrore] = useState<string | null>(null)
   const [confermaElimina, setConfermaElimina] = useState(false)
+  /**
+   * True quando la finestra è stata scelta a mano (o arriva da un trade già
+   * salvato): da quel momento l'ora non la cambia più.
+   */
+  const [finestraScelta, setFinestraScelta] = useState(false)
 
   useEffect(() => {
     let annullato = false
@@ -146,6 +156,7 @@ export default function FormTrade() {
 
           const { executions, ...campi } = esistente
           setTrade(campi)
+          setFinestraScelta(campi.finestra != null)
 
           for (const e of executions) {
             nuoveBozze[e.account_id] = {
@@ -174,6 +185,8 @@ export default function FormTrade() {
   }, [id])
 
   const conferme = contaConferme(trade)
+  /** Il punteggio Processo di questo solo trade, con la stessa formula delle statistiche. */
+  const processoTrade = punteggioProcesso([{ ...trade, executions: [] } as TradeCompleto]).valore
 
   function aggiorna(patch: Partial<Trade>) {
     setTrade((p) => ({ ...p, ...patch }))
@@ -198,6 +211,33 @@ export default function FormTrade() {
 
   function aggiornaEsito(accountId: string, esito: Esito | null) {
     setBozze((p) => ({ ...p, [accountId]: { ...p[accountId], esito } }))
+  }
+
+  /**
+   * Copia prezzi ed esito da un conto all'altro: di solito lo stesso setup
+   * entra e esce agli stessi livelli. I lotti restano quelli del conto.
+   */
+  function copiaPrezzi(daId: string, aId: string) {
+    setBozze((p) => {
+      const da = p[daId] ?? BOZZA_VUOTA
+      return {
+        ...p,
+        [aId]: {
+          ...(p[aId] ?? BOZZA_VUOTA),
+          entry: da.entry,
+          stop_loss: da.stop_loss,
+          take_profit: da.take_profit,
+          exit: da.exit,
+          esito: da.esito,
+        },
+      }
+    })
+  }
+
+  /** L'ora propone la finestra, finché non la si sceglie a mano. */
+  function aggiornaOra(valore: string) {
+    const ora = testoInDigitazione(valore)
+    setTrade((p) => ({ ...p, ora_entrata: ora, ...(finestraScelta ? {} : { finestra: finestraDaOra(ora) }) }))
   }
 
   /** Le executions nella forma attesa dal database. */
@@ -227,6 +267,8 @@ export default function FormTrade() {
   }
 
   async function salva(eNuovo = false) {
+    // Una scorciatoia premuta due volte non deve salvare due trade.
+    if (salvataggio) return
     const problema = validazione()
     if (problema) {
       setErrore(problema)
@@ -243,6 +285,7 @@ export default function FormTrade() {
         // giornata si inseriscono uno dopo l'altro.
         const data = trade.data!
         setTrade(tradeVuoto(data))
+        setFinestraScelta(false)
         const vuote: Record<string, BozzaCampi> = {}
         for (const a of account) vuote[a.id] = { ...BOZZA_VUOTA }
         setBozze(vuote)
@@ -256,6 +299,23 @@ export default function FormTrade() {
       setSalvataggio(false)
     }
   }
+
+  /**
+   * Ctrl+Invio salva, Ctrl+Maiusc+Invio salva e apre un trade nuovo, come in
+   * Linear. Il riferimento tiene sempre l'ultima versione di `salva`, che
+   * legge lo stato corrente del form.
+   */
+  const salvaRef = useRef(salva)
+  salvaRef.current = salva
+  useEffect(() => {
+    function suTasto(e: KeyboardEvent) {
+      if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      void salvaRef.current(e.shiftKey)
+    }
+    window.addEventListener('keydown', suTasto)
+    return () => window.removeEventListener('keydown', suTasto)
+  }, [])
 
   async function elimina() {
     if (!id) return
@@ -315,7 +375,7 @@ export default function FormTrade() {
               <Input
                 type="time"
                 value={oraBreve(trade.ora_entrata)}
-                onChange={(e) => aggiorna({ ora_entrata: testoInDigitazione(e.target.value) })}
+                onChange={(e) => aggiornaOra(e.target.value)}
               />
             </Campo>
           </div>
@@ -333,11 +393,19 @@ export default function FormTrade() {
           </div>
 
           <div className="mt-3">
-            <Campo etichetta="Finestra oraria">
+            <Campo
+              etichetta="Finestra oraria"
+              suggerimento={
+                !finestraScelta && trade.finestra != null ? "Proposta dall'ora di entrata." : undefined
+              }
+            >
               <GruppoOpzioni
                 opzioni={FINESTRE}
                 valore={trade.finestra ?? null}
-                onChange={(v) => aggiorna({ finestra: v })}
+                onChange={(v) => {
+                  setFinestraScelta(true)
+                  aggiorna({ finestra: v })
+                }}
               />
             </Campo>
           </div>
@@ -386,6 +454,20 @@ export default function FormTrade() {
               />
             ))}
           </div>
+
+          {/* Il numero di F+R completa la quinta conferma. Era stato tolto dal
+              form il 16/09/2026 (la colonna è rimasta nel database); è tornato
+              per il confronto prima/seconda F+R in Statistiche. */}
+          <div className="mt-3">
+            <Campo etichetta="Fallimento + Rottura: quale?">
+              <GruppoOpzioni
+                opzioni={NUMERI_FR}
+                valore={trade.numero_fr ?? null}
+                etichette={{ primo: 'Prima F+R', secondo: 'Seconda F+R' }}
+                onChange={(v) => aggiorna({ numero_fr: v })}
+              />
+            </Campo>
+          </div>
         </Sezione>
       </div>
 
@@ -431,9 +513,20 @@ export default function FormTrade() {
                   accountAttivo === a.id ? '' : 'hidden md:block'
                 }`}
               >
-                <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-testo-soft">
-                  {a.nome}
-                </h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-testo-soft">
+                    {a.nome}
+                  </h3>
+                  {a.id !== account[0].id && (
+                    <button
+                      type="button"
+                      onClick={() => copiaPrezzi(account[0].id, a.id)}
+                      className="rounded-md border border-bordo px-2 py-1 text-[11px] text-testo-soft transition-colors hover:text-testo"
+                    >
+                      Copia prezzi da {account[0].nome}
+                    </button>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {(
@@ -549,34 +642,10 @@ export default function FormTrade() {
         </div>
       </Sezione>
 
-      {/* --- Azioni ------------------------------------------------------- */}
-      <div className="flex flex-wrap items-center gap-2 pb-4">
-        <button
-          onClick={() => void salva(false)}
-          disabled={salvataggio}
-          className="rounded-md bg-accento px-4 py-2 text-sm font-medium text-superficie transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {salvataggio ? 'Salvataggio…' : 'Salva'}
-        </button>
-
-        <button
-          onClick={() => void salva(true)}
-          disabled={salvataggio}
-          className="rounded-md border border-accento px-4 py-2 text-sm text-accento transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          Salva e nuovo
-        </button>
-
-        <button
-          onClick={() => navigate(-1)}
-          disabled={salvataggio}
-          className="rounded-md border border-bordo px-4 py-2 text-sm text-testo-soft transition-colors hover:text-testo"
-        >
-          Annulla
-        </button>
-
-        {id && (
-          <div className="ml-auto">
+      {/* --- Eliminazione, lontana dai pulsanti di salvataggio --------------- */}
+      {id && (
+        <div className="flex justify-end">
+          <div>
             {confermaElimina ? (
               <span className="flex items-center gap-2 text-sm">
                 <span className="text-testo-soft">Eliminare?</span>
@@ -603,7 +672,51 @@ export default function FormTrade() {
               </button>
             )}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* --- Barra fissa: verdetto del processo e salvataggio ---------------- */}
+      {/* Sta sempre in vista mentre si compila: le cinque verifiche cambiano
+          a ogni clic, e salvare non richiede di scorrere fino in fondo. Su
+          telefono sta sopra la barra di navigazione. */}
+      <div className="riquadro sticky bottom-16 z-10 flex flex-wrap items-center gap-3 px-4 py-3 md:bottom-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <span className="num text-xs text-testo-soft">
+            Processo{' '}
+            <span className="text-sm text-testo">
+              {processoTrade == null ? '—' : Math.round(processoTrade)}
+            </span>
+            /100
+          </span>
+          <VerificheProcesso verifiche={verificheProcesso(trade)} />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden text-[11px] text-testo-soft lg:inline">Ctrl+Invio salva</span>
+          <button
+            onClick={() => navigate(-1)}
+            disabled={salvataggio}
+            className="rounded-md border border-bordo px-3 py-2 text-sm text-testo-soft transition-colors hover:text-testo"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={() => void salva(true)}
+            disabled={salvataggio}
+            title="Ctrl+Maiusc+Invio"
+            className="rounded-md border border-accento px-3 py-2 text-sm text-accento transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            Salva e nuovo
+          </button>
+          <button
+            onClick={() => void salva(false)}
+            disabled={salvataggio}
+            title="Ctrl+Invio"
+            className="rounded-md bg-accento px-4 py-2 text-sm font-medium text-superficie transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {salvataggio ? 'Salvataggio…' : 'Salva'}
+          </button>
+        </div>
       </div>
     </div>
   )

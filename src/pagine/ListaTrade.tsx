@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { metricheTrade, riepiloga } from '../lib/aggregazioni'
 import { CONFERME_TOTALI, contaConferme } from '../lib/calcoli'
@@ -20,6 +20,7 @@ import {
   oggiIso,
   VUOTO,
 } from '../lib/formato'
+import { verificheProcesso } from '../lib/processo'
 import { immagineSnapshot, linkAnteprima } from '../lib/tradingview'
 import { ESITI, FINESTRE, FLAG_COMPORTAMENTALI, type Account, type TradeCompleto } from '../lib/tipi'
 import { Campo, GruppoOpzioni, Input } from '../componenti/campi'
@@ -27,6 +28,7 @@ import SelettoreAccount, {
   accountSelezionati,
   type SelezioneAccount,
 } from '../componenti/SelettoreAccount'
+import VerificheProcesso from '../componenti/VerificheProcesso'
 
 const COLONNE: { chiave: Colonna; etichetta: string; allineaDestra?: boolean }[] = [
   { chiave: 'data', etichetta: 'Data' },
@@ -76,7 +78,7 @@ function SchedaTrade({ trade, account }: { trade: TradeCompleto; account: Accoun
   return (
     <Link
       to={`/trade/${trade.id}`}
-      className="group overflow-hidden rounded-card border border-bordo bg-superficie transition-colors hover:border-accento"
+      className="riquadro group overflow-hidden transition-colors hover:border-accento"
     >
       <div className="flex aspect-video items-center justify-center bg-sfondo">
         {anteprima && !immagineRotta ? (
@@ -113,6 +115,11 @@ function SchedaTrade({ trade, account }: { trade: TradeCompleto; account: Accoun
             <span className={classeSegno(m.rMedio)}>{formattaR(m.rMedio)}</span>
           </span>
         </div>
+
+        {/* Le cinque verifiche del processo: si vedono scorrendo la griglia. */}
+        <div className="pt-1">
+          <VerificheProcesso verifiche={verificheProcesso(trade)} compatta />
+        </div>
       </div>
     </Link>
   )
@@ -129,6 +136,20 @@ export default function ListaTrade() {
 
   const [caricamento, setCaricamento] = useState(true)
   const [errore, setErrore] = useState<string | null>(null)
+  const ricerca = useRef<HTMLInputElement>(null)
+
+  /** Il tasto / porta alla ricerca, se non si sta già scrivendo altrove. */
+  useEffect(() => {
+    function suTasto(e: KeyboardEvent) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return
+      e.preventDefault()
+      ricerca.current?.focus()
+    }
+    window.addEventListener('keydown', suTasto)
+    return () => window.removeEventListener('keydown', suTasto)
+  }, [])
 
   useEffect(() => {
     let annullato = false
@@ -195,7 +216,7 @@ export default function ListaTrade() {
   return (
     <div className="space-y-4">
       {/* --- Filtri -------------------------------------------------------- */}
-      <div className="rounded-card border border-bordo bg-superficie p-4">
+      <div className="riquadro p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelettoreAccount account={account} selezione={selezione} onChange={setSelezione} />
 
@@ -237,10 +258,11 @@ export default function ListaTrade() {
 
         <div className="mt-3">
           <Input
+            ref={ricerca}
             type="search"
             value={filtri.testo ?? ''}
             onChange={(e) => setFiltri({ ...filtri, testo: e.target.value || null })}
-            placeholder="Cerca nelle note, nell'emozione, nella direzione o nella data…"
+            placeholder="Cerca nelle note, nell'emozione, nella direzione o nella data…   ( / )"
           />
         </div>
 
@@ -287,7 +309,7 @@ export default function ListaTrade() {
       </div>
 
       {/* --- Riepilogo di ciò che è filtrato -------------------------------- */}
-      <div className="flex flex-wrap gap-x-8 gap-y-2 rounded-card border border-bordo bg-superficie px-4 py-3 text-sm">
+      <div className="riquadro flex flex-wrap gap-x-8 gap-y-2 px-4 py-3 text-sm">
         <span className="text-testo-soft">
           {visibili.length} trade
           {filtriAttivi && ` su ${trades.length}`}
@@ -318,7 +340,7 @@ export default function ListaTrade() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-card border border-bordo bg-superficie">
+        <div className="riquadro overflow-x-auto">
           <table className="w-full min-w-3xl text-sm">
             <thead>
               <tr className="border-b border-bordo">

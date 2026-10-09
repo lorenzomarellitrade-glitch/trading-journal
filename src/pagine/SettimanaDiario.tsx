@@ -1,9 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { caricaSettimanaDiario, salvaSettimanaDiario } from '../lib/dati'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { raggruppaPerGiorno } from '../lib/aggregazioni'
+import { caricaAccount, caricaSettimanaDiario, caricaTrades, salvaSettimanaDiario } from '../lib/dati'
 import { aggiungiGiorni, fineSettimana, inizioSettimana } from '../lib/date'
 import { GIORNI_FERIALI, RIGA_VUOTA, RISPOSTE_PIANO } from '../lib/diario'
-import { formattaData, oggiIso, testoInDigitazione } from '../lib/formato'
-import type { GiornoFeriale, PianoRispettato, RigaSettimana, SettimanaDiario as Settimana } from '../lib/tipi'
+import { formattaData, formattaUsd, oggiIso, testoInDigitazione } from '../lib/formato'
+import { compilaRigaSettimana, riassuntoGiorno, type RiassuntoGiorno } from '../lib/giorno'
+import type {
+  Account,
+  GiornoFeriale,
+  PianoRispettato,
+  RigaSettimana,
+  SettimanaDiario as Settimana,
+  TradeCompleto,
+} from '../lib/tipi'
+import RiassuntoGiornoChip from '../componenti/RiassuntoGiornoChip'
 import SchedeDiario from '../componenti/SchedeDiario'
 
 /**
@@ -55,6 +65,46 @@ export default function SettimanaDiario() {
   const [salvataggio, setSalvataggio] = useState(false)
   const [errore, setErrore] = useState<string | null>(null)
   const [messaggio, setMessaggio] = useState<string | null>(null)
+
+  /** I trade della settimana, per affiancare i fatti a quello che si scrive. */
+  const [tradeSettimana, setTradeSettimana] = useState<TradeCompleto[]>([])
+  const [conti, setConti] = useState<Account[]>([])
+  useEffect(() => {
+    let annullato = false
+    Promise.all([caricaTrades(lunedi, aggiungiGiorni(lunedi, 6)), caricaAccount()])
+      .then(([t, acc]) => {
+        if (annullato) return
+        setTradeSettimana(t)
+        setConti(acc)
+      })
+      // Un di più: senza trade il riepilogo resta compilabile a mano.
+      .catch(() => {
+        if (!annullato) setTradeSettimana([])
+      })
+    return () => {
+      annullato = true
+    }
+  }, [lunedi])
+
+  /** Il riassunto dei trade di ogni giorno feriale, se ce ne sono. */
+  const riassunti = useMemo(() => {
+    const perData = raggruppaPerGiorno(tradeSettimana)
+    const mappa = new Map<GiornoFeriale, RiassuntoGiorno>()
+    GIORNI_FERIALI.forEach(({ giorno }, i) => {
+      const delGiorno = perData.get(aggiungiGiorni(lunedi, i))
+      if (delGiorno) mappa.set(giorno, riassuntoGiorno(delGiorno, conti))
+    })
+    return mappa
+  }, [tradeSettimana, conti, lunedi])
+
+  /** Copia i dati dei trade nei campi ancora vuoti di un giorno. */
+  function compilaGiorno(giorno: GiornoFeriale) {
+    const r = riassunti.get(giorno)
+    if (!r) return
+    const riga = { ...RIGA_VUOTA, ...bozza.giorni[giorno] }
+    const patch = compilaRigaSettimana(riga, r, r.pnlUsd == null ? null : formattaUsd(r.pnlUsd, true))
+    if (Object.keys(patch).length > 0) aggiornaGiorno(giorno, patch)
+  }
 
   useEffect(() => {
     let annullato = false
@@ -174,7 +224,7 @@ export default function SettimanaDiario() {
             </div>
           )}
 
-          <section className="space-y-4 rounded-card border border-bordo bg-superficie p-4">
+          <section className="riquadro space-y-4 p-4">
             <Domanda etichetta="Strumenti seguiti">
               <input
                 value={bozza.strumenti ?? ''}
@@ -186,6 +236,17 @@ export default function SettimanaDiario() {
 
             {/* --- La tabella dei giorni --------------------------------------- */}
             <div>
+              {riassunti.size > 0 && (
+                <div className="mb-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => GIORNI_FERIALI.forEach(({ giorno }) => compilaGiorno(giorno))}
+                    className="rounded-md border border-bordo px-3 py-1.5 text-xs text-testo-soft transition-colors hover:text-testo"
+                  >
+                    Compila dai trade i campi vuoti
+                  </button>
+                </div>
+              )}
               {/* Intestazioni: su telefono ogni giorno diventa un blocco a sé. */}
               <div className="hidden grid-cols-[6rem_1fr_8rem_8rem_1.5fr] gap-2 pb-1 text-[11px] uppercase tracking-wide text-testo-soft md:grid">
                 <span>Giorno</span>
@@ -240,6 +301,19 @@ export default function SettimanaDiario() {
                         aria-label={`Nota di ${etichetta}`}
                         className={CLASSI_CAMPO}
                       />
+                      {riassunti.has(giorno) && (
+                        <div className="flex flex-wrap items-center gap-2 md:col-span-5 md:col-start-2">
+                          <span className="text-[11px] text-testo-soft">Dal journal:</span>
+                          <RiassuntoGiornoChip r={riassunti.get(giorno)!} />
+                          <button
+                            type="button"
+                            onClick={() => compilaGiorno(giorno)}
+                            className="text-[11px] text-accento hover:underline"
+                          >
+                            Copia nei campi vuoti
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -247,7 +321,7 @@ export default function SettimanaDiario() {
             </div>
           </section>
 
-          <section className="grid gap-4 rounded-card border border-bordo bg-superficie p-4 md:grid-cols-2">
+          <section className="riquadro grid gap-4 p-4 md:grid-cols-2">
             <Domanda etichetta="La cosa che ho fatto meglio">
               <textarea
                 rows={3}

@@ -15,7 +15,7 @@ export function Sezione({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4 md:p-5">
+    <section className="riquadro p-4 md:p-5">
       <header className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium tracking-tight text-testo">{titolo}</h2>
         {azione}
@@ -47,7 +47,8 @@ const CLASSI_INPUT =
   'mt-0.5 w-full rounded-md border border-bordo bg-sfondo px-2.5 py-2 text-sm text-testo ' +
   'placeholder:text-testo-soft/60 disabled:opacity-50'
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+/** Con React 19 `ref` è una prop qualsiasi: arriva all'input insieme alle altre. */
+export function Input(props: React.ComponentProps<'input'>) {
   const { className = '', ...resto } = props
   return <input {...resto} className={`${CLASSI_INPUT} ${className}`} />
 }
@@ -164,21 +165,26 @@ export function Kpi({
   classe = 'text-testo',
   nota,
   icona,
+  grafico,
 }: {
   etichetta: string
-  valore: string
+  /** Di norma un testo; un nodo quando il valore è composto, es. vincita / perdita */
+  valore: ReactNode
   classe?: string
   nota?: string
   icona?: string
+  /** Micro-grafico sotto il valore, es. l'andamento trade dopo trade */
+  grafico?: ReactNode
 }) {
   return (
-    <div className="rounded-card border border-bordo bg-superficie px-4 py-3">
+    <div className="riquadro px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <dt className="text-[11px] uppercase tracking-wide text-testo-soft">{etichetta}</dt>
         {icona && <Icona percorso={icona} />}
       </div>
-      <dd className={`num mt-0.5 text-lg ${classe}`}>{valore}</dd>
+      <dd className={`num mt-0.5 text-xl tracking-tight ${classe}`}>{valore}</dd>
       {nota && <p className="num text-[11px] text-testo-soft">{nota}</p>}
+      {grafico && <div className="mt-2">{grafico}</div>}
     </div>
   )
 }

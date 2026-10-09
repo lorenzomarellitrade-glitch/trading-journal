@@ -4,6 +4,7 @@ import { caricaAccount, caricaTrades } from '../lib/dati'
 import { primoDelMese, spostaMese } from '../lib/date'
 import { formattaPercent, formattaR, formattaUsd, oggiIso, VUOTO } from '../lib/formato'
 import {
+  analisiContesto,
   analisiProcesso,
   costoChiusuraManuale,
   curvaEquity,
@@ -13,6 +14,7 @@ import {
   effettoTradePrecedente,
   perGiornoSettimana,
   perMese,
+  perOraEntrata,
   perTradeGiornalieri,
   punteggioProcesso,
   punteggioRisultati,
@@ -37,6 +39,14 @@ import SelettoreAccount, {
   accountSelezionati,
   type SelezioneAccount,
 } from '../componenti/SelettoreAccount'
+
+/** Le quattro parti della pagina, per l'indice in cima. */
+const SEZIONI = [
+  { id: 'processo', etichetta: 'Processo' },
+  { id: 'contesto', etichetta: 'Contesto di mercato' },
+  { id: 'tempo', etichetta: 'Tempo' },
+  { id: 'andamento', etichetta: 'Andamento' },
+] as const
 
 interface Periodo {
   da: string | null
@@ -65,7 +75,7 @@ function classeSegno(n: number | null): string {
 
 function Sezione({ titolo, children }: { titolo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro p-4">
       <h3 className="mb-2 text-sm font-medium text-testo">{titolo}</h3>
       {children}
     </section>
@@ -144,6 +154,8 @@ export default function Statistiche() {
     ],
     [filtrati, selezionati],
   )
+  const contesto = useMemo(() => analisiContesto(filtrati, selezionati), [filtrati, selezionati])
+  const ore = useMemo(() => perOraEntrata(filtrati, selezionati), [filtrati, selezionati])
   const giorni = useMemo(() => perGiornoSettimana(filtrati, selezionati), [filtrati, selezionati])
   const mesi = useMemo(() => perMese(filtrati, selezionati), [filtrati, selezionati])
   const disciplina = useMemo(() => disciplinaPerMese(filtrati), [filtrati])
@@ -170,7 +182,7 @@ export default function Statistiche() {
   return (
     <div className="space-y-6">
       {/* --- Filtri, validi per tutta la pagina --------------------------- */}
-      <div className="rounded-card border border-bordo bg-superficie p-4">
+      <div className="riquadro p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelettoreAccount account={account} selezione={selezione} onChange={setSelezione} />
 
@@ -213,118 +225,170 @@ export default function Statistiche() {
         </div>
       </div>
 
-      {/* --- I due punteggi ------------------------------------------------ */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Punteggio
+      {/* --- Indice: le quattro parti della pagina, in ordine di importanza -- */}
+      <nav aria-label="Sezioni delle statistiche" className="flex flex-wrap gap-1">
+        {SEZIONI.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            onClick={(e) => {
+              // Con HashRouter l'ancora cambierebbe la rotta: si scorre a mano.
+              e.preventDefault()
+              document.getElementById(s.id)?.scrollIntoView({ block: 'start' })
+            }}
+            className="rounded-md border border-bordo px-3 py-1.5 text-xs text-testo-soft transition-colors hover:text-testo"
+          >
+            {s.etichetta}
+          </a>
+        ))}
+      </nav>
+
+      {/* === 1. Processo ===================================================== */}
+      <section id="processo" className="scroll-mt-20 space-y-4">
+        <TitoloSezione
           titolo="Processo"
-          spiegazione="Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua."
-          punteggio={processo}
+          sottotitolo="Prima se hai seguito il piano, poi quanto ha reso."
         />
-        <Punteggio
-          titolo="Risultati"
-          spiegazione="Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade."
-          punteggio={risultati}
-        />
-      </div>
 
-      {/* --- Metriche generali -------------------------------------------- */}
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi
-          etichetta="P&L totale"
-          icona={ICONE.soldi}
-          valore={generale.numeroChiusi > 0 ? formattaUsd(generale.pnlUsd, true) : VUOTO}
-          classe={classeSegno(generale.numeroChiusi > 0 ? generale.pnlUsd : null)}
-          nota={
-            generale.numeroChiusi > 0 ? formattaPercent(generale.pnlPercent, 2, true) : undefined
-          }
-        />
-        <Kpi
-          etichetta="Win rate"
-          icona={ICONE.bersaglio}
-          valore={generale.winRate == null ? VUOTO : formattaPercent(generale.winRate, 0)}
-          nota={`${generale.vittorie} su ${generale.numeroChiusi}`}
-        />
-        <Kpi
-          etichetta="Expectancy"
-          icona={ICONE.salita}
-          valore={formattaR(generale.expectancyR)}
-          nota="per trade"
-        />
-        <Kpi
-          etichetta="Drawdown max"
-          icona={ICONE.discesa}
-          valore={dd.usd > 0 ? formattaUsd(-dd.usd) : formattaUsd(0)}
-          classe={dd.usd > 0 ? 'text-negativo' : 'text-testo'}
-          nota={dd.percent == null ? undefined : formattaPercent(dd.percent)}
-        />
-        <Kpi
-          etichetta="Trade"
-          icona={ICONE.elenco}
-          valore={String(generale.numeroTrade)}
-          nota={
-            generale.numeroTrade === generale.numeroChiusi
-              ? undefined
-              : `${generale.numeroChiusi} conclusi`
-          }
-        />
-        <Kpi etichetta="R medio" icona={ICONE.battito} valore={formattaR(generale.rMedio)} />
-      </dl>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Punteggio
+            titolo="Processo"
+            spiegazione="Quanto hai seguito il piano: conferme, finestra, stop fermo, uscita a piano, idea tua."
+            punteggio={processo}
+          />
+          <Punteggio
+            titolo="Risultati"
+            spiegazione="Dall'expectancy in R: 50 è il pareggio, 100 vuol dire +1R medio a trade."
+            punteggio={risultati}
+          />
+        </div>
 
-      {/* --- Disciplina nel tempo ------------------------------------------ */}
-      <section className="rounded-card border border-bordo bg-superficie p-4">
-        <header className="mb-2">
-          <h3 className="text-sm font-medium text-testo">Aderenza al processo, mese per mese</h3>
-          <p className="text-xs text-testo-soft">
-            La linea delle 5/5 conferme dovrebbe salire, le altre scendere. È l'unico grafico che
-            misura te e non il mercato.
-          </p>
-        </header>
-        <GraficoDisciplina righe={disciplina} />
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+          <Kpi
+            etichetta="P&L totale"
+            icona={ICONE.soldi}
+            valore={generale.numeroChiusi > 0 ? formattaUsd(generale.pnlUsd, true) : VUOTO}
+            classe={classeSegno(generale.numeroChiusi > 0 ? generale.pnlUsd : null)}
+            nota={
+              generale.numeroChiusi > 0 ? formattaPercent(generale.pnlPercent, 2, true) : undefined
+            }
+          />
+          <Kpi
+            etichetta="Win rate"
+            icona={ICONE.bersaglio}
+            valore={generale.winRate == null ? VUOTO : formattaPercent(generale.winRate, 0)}
+            nota={`${generale.vittorie} su ${generale.numeroChiusi}`}
+          />
+          <Kpi
+            etichetta="Expectancy"
+            icona={ICONE.salita}
+            valore={formattaR(generale.expectancyR)}
+            classe={classeSegno(generale.expectancyR)}
+            nota="per trade"
+          />
+          <Kpi
+            etichetta="Drawdown max"
+            icona={ICONE.discesa}
+            valore={dd.usd > 0 ? formattaUsd(-dd.usd) : formattaUsd(0)}
+            classe={dd.usd > 0 ? 'text-negativo' : 'text-testo'}
+            nota={dd.percent == null ? undefined : formattaPercent(dd.percent)}
+          />
+          <Kpi
+            etichetta="Trade"
+            icona={ICONE.elenco}
+            valore={String(generale.numeroTrade)}
+            nota={
+              generale.numeroTrade === generale.numeroChiusi
+                ? undefined
+                : `${generale.numeroChiusi} conclusi`
+            }
+          />
+          <Kpi etichetta="R medio" icona={ICONE.battito} valore={formattaR(generale.rMedio)} />
+        </dl>
+
+        <AnalisiProcesso confronti={confronti} />
+
+        <div className={`grid gap-3 ${costoUscita.numeroTrade > 0 ? 'lg:grid-cols-[2fr_1fr]' : ''}`}>
+          <section className="riquadro p-4">
+            <header className="mb-2">
+              <h3 className="text-sm font-medium text-testo">Aderenza al processo, mese per mese</h3>
+              <p className="text-xs text-testo-soft">
+                La linea delle 5/5 conferme dovrebbe salire, le altre scendere. È l'unico grafico
+                che misura te e non il mercato.
+              </p>
+            </header>
+            <GraficoDisciplina righe={disciplina} />
+          </section>
+
+          {costoUscita.numeroTrade > 0 && (
+            <section className="riquadro p-4">
+              <h3 className="text-sm font-medium text-testo">Costo delle uscite anticipate</h3>
+              <p className="num mt-3 text-3xl tracking-tight text-negativo">
+                {formattaR(costoUscita.rLasciato)}
+              </p>
+              <p className="mt-1 text-sm text-testo">
+                lasciati sul piatto sui{' '}
+                <span className="num">{costoUscita.numeroTrade}</span>{' '}
+                {costoUscita.numeroTrade === 1 ? 'trade chiuso' : 'trade chiusi'} a mano in utile,
+                in media <span className="num">{formattaR(costoUscita.rLasciatoMedio)}</span> a
+                trade.
+              </p>
+              <p className="mt-2 text-xs text-testo-soft">
+                È una stima ottimistica: confronta il target che avevi fissato con l'uscita reale,
+                ma nessuno sa se quel target sarebbe stato raggiunto. Serve l'ordine di grandezza.
+              </p>
+            </section>
+          )}
+        </div>
       </section>
 
-      {/* --- Costo delle uscite anticipate --------------------------------- */}
-      {costoUscita.numeroTrade > 0 && (
-        <section className="rounded-card border border-bordo bg-superficie p-4">
-          <h3 className="text-sm font-medium text-testo">Costo delle uscite anticipate</h3>
-          <p className="mt-1 text-sm text-testo">
-            Sui{' '}
-            <span className="num">{costoUscita.numeroTrade}</span>{' '}
-            {costoUscita.numeroTrade === 1 ? 'trade chiuso' : 'trade chiusi'} a mano in utile, hai
-            lasciato sul piatto{' '}
-            <span className="num font-medium text-negativo">
-              {formattaR(costoUscita.rLasciato)}
-            </span>{' '}
-            rispetto al piano, in media{' '}
-            <span className="num">{formattaR(costoUscita.rLasciatoMedio)}</span> a trade.
-          </p>
-          <p className="mt-2 text-xs text-testo-soft">
-            È una stima ottimistica: confronta il target che avevi fissato con l'uscita reale, ma
-            nessuno sa se quel target sarebbe stato raggiunto. Serve l'ordine di grandezza.
-          </p>
-        </section>
-      )}
+      {/* === 2. Contesto di mercato ========================================= */}
+      <section id="contesto" className="scroll-mt-20 space-y-4">
+        <AnalisiProcesso
+          confronti={contesto}
+          titolo="Contesto di mercato"
+          sottotitolo="A favore o contro il bias dei timeframe alti, prima o seconda F+R. I trade senza il dato restano fuori dal confronto."
+        />
+      </section>
 
-      {/* --- Analisi di processo, prima dei grafici ------------------------ */}
-      <AnalisiProcesso confronti={confronti} />
-
-      {/* --- Quando vado meglio -------------------------------------------- */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Sezione titolo="Per giorno della settimana">
-          <TabellaPeriodi righe={giorni} intestazionePrimaColonna="Giorno" />
-        </Sezione>
+      {/* === 3. Tempo ======================================================= */}
+      <section id="tempo" className="scroll-mt-20 space-y-4">
+        <TitoloSezione titolo="Tempo" sottotitolo="Quando vai meglio: ora di entrata, giorno, mese." />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Sezione titolo="Per ora di entrata">
+            <TabellaPeriodi righe={ore} intestazionePrimaColonna="Ora" />
+          </Sezione>
+          <Sezione titolo="Per giorno della settimana">
+            <TabellaPeriodi righe={giorni} intestazionePrimaColonna="Giorno" />
+          </Sezione>
+        </div>
         <Sezione titolo="Per mese">
           <TabellaPeriodi righe={mesi} intestazionePrimaColonna="Mese" />
         </Sezione>
-      </div>
+      </section>
 
-      {/* --- Grafici ------------------------------------------------------- */}
-      <Sezione titolo="Equity curve">
-        <GraficoEquity punti={equity} account={contiNelGrafico} />
-      </Sezione>
-
-      <Sezione titolo="Distribuzione degli R realizzati">
-        <GraficoDistribuzioneR barre={istogramma} />
-      </Sezione>
+      {/* === 4. Andamento =================================================== */}
+      <section id="andamento" className="scroll-mt-20 space-y-4">
+        <TitoloSezione titolo="Andamento" sottotitolo="Equity e distribuzione degli R." />
+        <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+          <Sezione titolo="Equity curve">
+            <GraficoEquity punti={equity} account={contiNelGrafico} />
+          </Sezione>
+          <Sezione titolo="Distribuzione degli R realizzati">
+            <GraficoDistribuzioneR barre={istogramma} />
+          </Sezione>
+        </div>
+      </section>
     </div>
+  )
+}
+
+/** Titolo di una delle quattro parti della pagina. */
+function TitoloSezione({ titolo, sottotitolo }: { titolo: string; sottotitolo: string }) {
+  return (
+    <header>
+      <h2 className="text-base font-medium tracking-tight text-testo">{titolo}</h2>
+      <p className="text-xs text-testo-soft">{sottotitolo}</p>
+    </header>
   )
 }
