@@ -35,7 +35,7 @@ Data: 2026-10-10. Legenda: **[F]** fatto verificato sulla fonte, **[S]** fonte s
 ## 1. FormTrade e Calendario
 
 **Problemi trovati**
-- Il campo **F+R (prima o seconda)** esiste nel database e nell'export CSV, ma il form non lo chiede: il dato non viene mai compilato.
+- Il campo **F+R (prima o seconda)** esiste nel database e nell'export CSV, ma il form non lo chiede. **Correzione:** non è una dimenticanza. Il selettore è stato tolto di proposito il 16/09/2026 (commit `9fbe6dc`), insieme al confronto in Statistiche. L'ho rimesso perché ora viene chiesto il confronto per prima/seconda F+R; va confermato da Lore.
 - Il verdetto sul processo è sparso: conferme in alto, finestra nel contesto, stop/uscita/idea nella scheda "Comportamento" in fondo.
 - Con due conti, prezzi identici vanno scritti due volte.
 - La finestra si sceglie a mano anche quando l'ora d'entrata la dice già.
@@ -45,7 +45,7 @@ Data: 2026-10-10. Legenda: **[F]** fatto verificato sulla fonte, **[S]** fonte s
 | # | Proposta | Criterio | Stato |
 |---|---|---|---|
 | 1 | Barra fissa in basso con le **cinque verifiche del processo** in tempo reale (✓/✗/—), punteggio Processo del trade, e Salva / Salva e nuovo / Annulla | Vedere subito le cose importanti; salvataggio sempre a portata | Applicata |
-| 2 | **F+R prima/seconda** accanto alla conferma "Fallimento + Rottura" | Non si perde un dato già previsto dallo schema | Applicata |
+| 2 | **F+R prima/seconda** accanto alla conferma "Fallimento + Rottura" | Serve al confronto per F+R chiesto per Statistiche. Riprende una scelta tolta il 16/09: da confermare | Applicata, da confermare |
 | 3 | **Finestra proposta dall'ora** d'entrata (09:00-11:59 → in finestra), solo se non scelta a mano | Un clic in meno, nessuna scelta sovrascritta | Applicata |
 | 4 | **"Copia prezzi dal conto X"** sul secondo conto; i lotti restano propri | Meno battute | Applicata |
 | 5 | **Ctrl+Invio** salva, **Ctrl+Maiusc+Invio** salva e apre un nuovo trade | Più veloce in serie | Applicata |

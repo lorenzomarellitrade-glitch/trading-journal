@@ -85,7 +85,7 @@ function CardConfronto({ confronto }: { confronto: Confronto }) {
   const migliore = indiceMigliore(confronto.gruppi)
 
   return (
-    <section className="rounded-card border border-bordo bg-superficie p-4">
+    <section className="riquadro p-4">
       <header className="mb-3">
         <h3 className="text-sm font-medium text-testo">{confronto.titolo}</h3>
         <p className="text-xs text-testo-soft">{confronto.domanda}</p>
@@ -104,20 +104,26 @@ function CardConfronto({ confronto }: { confronto: Confronto }) {
   )
 }
 
-export default function AnalisiProcesso({ confronti }: { confronti: Confronto[] }) {
+export default function AnalisiProcesso({
+  confronti,
+  titolo = 'Analisi di processo',
+  sottotitolo = 'Non quanto hai guadagnato, ma se hai guadagnato quando hai seguito il piano.',
+}: {
+  confronti: Confronto[]
+  titolo?: string
+  sottotitolo?: string
+}) {
   const qualcheDato = confronti.some((c) => c.gruppi.some((g) => g.numeroTrade > 0))
 
   return (
     <div className="space-y-3">
       <header>
-        <h2 className="text-base font-medium tracking-tight text-testo">Analisi di processo</h2>
-        <p className="text-xs text-testo-soft">
-          Non quanto hai guadagnato, ma se hai guadagnato quando hai seguito il piano.
-        </p>
+        <h2 className="text-base font-medium tracking-tight text-testo">{titolo}</h2>
+        <p className="text-xs text-testo-soft">{sottotitolo}</p>
       </header>
 
       {!qualcheDato && (
-        <p className="rounded-card border border-bordo bg-superficie px-4 py-6 text-center text-sm text-testo-soft">
+        <p className="riquadro px-4 py-6 text-center text-sm text-testo-soft">
           Servono trade conclusi per poter confrontare qualcosa.
         </p>
       )}

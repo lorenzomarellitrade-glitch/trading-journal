@@ -455,8 +455,9 @@ export default function FormTrade() {
             ))}
           </div>
 
-          {/* Il numero di F+R completa la quinta conferma: era nello schema
-              ma il form non lo chiedeva. */}
+          {/* Il numero di F+R completa la quinta conferma. Era stato tolto dal
+              form il 16/09/2026 (la colonna è rimasta nel database); è tornato
+              per il confronto prima/seconda F+R in Statistiche. */}
           <div className="mt-3">
             <Campo etichetta="Fallimento + Rottura: quale?">
               <GruppoOpzioni

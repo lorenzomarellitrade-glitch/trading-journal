@@ -927,3 +927,76 @@ export function mappaSettimane(
 
   return { settimane, massimoAssoluto }
 }
+
+// ---------------------------------------------------------------------------
+// Contesto di mercato e ora di entrata
+// ---------------------------------------------------------------------------
+
+/** Il trade va nella direzione del bias indicato? null se il bias manca o è laterale. */
+function aFavoreDelBias(t: TradeCompleto, bias: TradeCompleto['bias_daily']): boolean | null {
+  if (bias == null || bias === 'laterale') return null
+  return (t.direzione === 'long') === (bias === 'rialzista')
+}
+
+/**
+ * Le domande sul contesto: operare a favore o contro il bias dei timeframe
+ * alti, e prendere la prima o la seconda F+R. Sono separate dall'analisi di
+ * processo perché non sono regole del piano ma condizioni di mercato.
+ *
+ * I trade senza il dato (bias non indicato, F+R non indicata) restano fuori
+ * dal confronto: contarli da una parte o dall'altra lo falserebbe.
+ */
+export function analisiContesto(trades: TradeCompleto[], account: Account[]): Confronto[] {
+  const c = (
+    titolo: string,
+    domanda: string,
+    definizioni: { etichetta: string; filtro: (t: TradeCompleto) => boolean }[],
+  ) => confronta(trades, account, titolo, domanda, definizioni)
+
+  return [
+    c('Bias Daily', 'Rendo di più a favore del bias giornaliero?', [
+      { etichetta: 'A favore', filtro: (t) => aFavoreDelBias(t, t.bias_daily) === true },
+      { etichetta: 'Contro', filtro: (t) => aFavoreDelBias(t, t.bias_daily) === false },
+      { etichetta: 'Daily laterale', filtro: (t) => t.bias_daily === 'laterale' },
+    ]),
+
+    c('Bias H4', 'E rispetto al bias a 4 ore?', [
+      { etichetta: 'A favore', filtro: (t) => aFavoreDelBias(t, t.bias_h4) === true },
+      { etichetta: 'Contro', filtro: (t) => aFavoreDelBias(t, t.bias_h4) === false },
+      { etichetta: 'H4 laterale', filtro: (t) => t.bias_h4 === 'laterale' },
+    ]),
+
+    c('Fallimento + Rottura', 'Conviene prendere la prima F+R o aspettare la seconda?', [
+      { etichetta: 'Prima F+R', filtro: (t) => t.numero_fr === 'primo' },
+      { etichetta: 'Seconda F+R', filtro: (t) => t.numero_fr === 'secondo' },
+    ]),
+  ]
+}
+
+/**
+ * Rendimento per ora di entrata, una riga per ogni ora in cui si è operato,
+ * dalla prima all'ultima. I trade senza ora finiscono in una riga a parte,
+ * in fondo, solo se ce ne sono.
+ */
+export function perOraEntrata(trades: TradeCompleto[], account: Account[]): RigaPeriodo[] {
+  const perOra = new Map<string, TradeCompleto[]>()
+  const senzaOra: TradeCompleto[] = []
+
+  for (const t of trades) {
+    const ora = t.ora_entrata?.slice(0, 2)
+    if (!ora || !/^\d{2}$/.test(ora)) {
+      senzaOra.push(t)
+      continue
+    }
+    const esistenti = perOra.get(ora)
+    if (esistenti) esistenti.push(t)
+    else perOra.set(ora, [t])
+  }
+
+  const righe = [...perOra.keys()]
+    .sort()
+    .map((ora) => gruppo(`${ora}:00-${ora}:59`, perOra.get(ora)!, account))
+
+  if (senzaOra.length > 0) righe.push(gruppo('Ora non indicata', senzaOra, account))
+  return righe
+}
