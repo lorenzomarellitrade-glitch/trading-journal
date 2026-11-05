@@ -8,7 +8,7 @@ const fmtD=k=>String(k).split("-").reverse().join(".");
 
 /* Strategie: checklist fisse, dalle parole di Lore (2026-11-04) */
 const STRAT={
- xau:{n:"XAUUSD",sub:"intraday",sym:"XAUUSD",risk:.5,check:[["direzione multi-timeframe","D e 4H d'accordo","D · 4H"],["zona PRZ / supply-demand","il prezzo è in una zona, non in mezzo","4H"],["rifinitura della zona","","1H"],["evidence","reazione visibile nella zona","10'"],["fallimento e rottura","il pattern di entrata","5'"]]},
+ xau:{n:"XAUUSD",sub:"intraday",sym:"XAUUSD",risk:.5,check:[["direzione multi-timeframe","D e 4H d'accordo","D · 4H"],["zona PRZ / supply-demand","il prezzo è in una zona, non in mezzo","4H"],["rifinitura della zona","","1H"],["evidence","reazione visibile nella zona","15'"],["fallimento e rottura","il pattern di entrata","5'"]]},
  fx:{n:"FOREX",sub:"swing",sym:"FOREX",risk:.4,check:[["direzione multi-timeframe","W e D d'accordo","W · D"],["AOI, area di interesse","","W · D · 4H"],["livello psicologico dentro la AOI","","AOI"],["evidence","","4H"],["entry","","1H"]]}
 };
 const STATI=[["lucido","presente, senza fretta"],["dubito di me","esito, cerco conferme in più"],["poco concentrato","distratto, stanco"],["ci penso troppo","analisi infinita, entro tardi"]];

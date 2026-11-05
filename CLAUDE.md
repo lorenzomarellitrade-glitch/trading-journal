@@ -3,7 +3,7 @@
 Journal di trading personale di Lore, rifatto il 2026-11-05 al posto dell'app React (il codice vecchio resta nella storia di git fino al commit `4bf6d17`). Utente singolo, si usa soprattutto da computer, telefono secondario.
 
 ## Cosa fa
-- Due strategie con checklist fissa a 5 voci: **XAUUSD** (direzione MTF, PRZ 4H, rifinitura 1H, evidence 10', fallimento e rottura 5') e **FOREX** (direzione MTF, AOI W-D-4H, livello psicologico, evidence 4H, entry 1H). Le voci stanno in `logica.js` (`STRAT`) e si cambiano solo con l'OK di Lore.
+- Due strategie con checklist fissa a 5 voci: **XAUUSD** (direzione MTF, PRZ 4H, rifinitura 1H, evidence 15', fallimento e rottura 5') e **FOREX** (direzione MTF, AOI W-D-4H, livello psicologico, evidence 4H, entry 1H). Le voci stanno in `logica.js` (`STRAT`) e si cambiano solo con l'OK di Lore.
 - Risultati **solo in % sul conto e in R**, mai in soldi.
 - Stato di Lore prima e dopo: lucido · dubito di me · poco concentrato · ci penso troppo. Confluenze libere, analizzate con/senza.
 - Home da tenere aperta in sessione: orologio, sessioni, le due finestre di Lore (8:00-10:30, 16:30-19:00), come arrivo alla sessione, checklist con win rate, trade aperto, ultima lezione.
