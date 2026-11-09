@@ -39,4 +39,18 @@ ok("weekOf: solo da lunedì",(()=>{const today=new Date(2026,10,5);const w=L.wee
 ok("sortT: per data e ora",L.sortT([t({d:"2026-11-03",ora:"10:00"}),t({d:"2026-11-02",ora:"17:00"}),t({d:"2026-11-03",ora:"08:30"})]).map(x=>x.d+" "+x.ora).join("|")==="2026-11-02 17:00|2026-11-03 08:30|2026-11-03 10:00");
 ok("pct e fmtD",L.pct(1.5)==="+1,50 %"&&L.pct(-0.25)==="-0,25 %"&&L.fmtD("2026-11-05")==="05.11.2026");
 ok("esc",L.esc('<b>"x"</b>')==="&lt;b&gt;&quot;x&quot;&lt;/b&gt;"&&L.esc(null)==="");
+// RR e livelli (Lore, 2026-11-09): SL e TP in % dal rischio e dall'RR scritto 1:2
+ok("parseRR: 1:2, 1:2,5, 1 : 3.5, 2:4",L.parseRR("1:2")===2&&L.parseRR("1:2,5")===2.5&&L.parseRR(" 1 : 3.5 ")===3.5&&L.parseRR("2:4")===2);
+ok("parseRR: vuoto = null, sbagliato = NaN",L.parseRR("")===null&&L.parseRR(null)===null&&Number.isNaN(L.parseRR("abc"))&&Number.isNaN(L.parseRR("1:0"))&&Number.isNaN(L.parseRR("1:"))&&Number.isNaN(L.parseRR("0:2"))&&Number.isNaN(L.parseRR("1:100000")));
+ok("parseRR: numero solo = 1:numero",L.parseRR("3")===3);
+ok("fmtRR",L.fmtRR(2)==="1:2"&&L.fmtRR(2.5)==="1:2,5"&&L.fmtRR(null)==="");
+ok("livelli: rischio 2 e 1:2 = SL -2, TP +4",(()=>{const v=L.livelli(2,2);return v.sl===-2&&v.tp===4})());
+ok("livelli: arrotonda a 2 decimali",L.livelli(0.5,2.5).tp===1.25&&L.livelli(0.3,3.3).tp===0.99);
+ok("livelli: senza rischio o RR = null",L.livelli(null,2).tp===null&&L.livelli(2,null).tp===null&&L.livelli(2,null).sl===-2);
+ok("esitoDa: TP, SL, pareggio",(()=>{const a=L.esitoDa("tp",2,2),b=L.esitoDa("sl",2,2),c=L.esitoDa("be",2,2);return a.res===4&&a.r===2&&b.res===-2&&b.r===-1&&c.res===0&&c.r===0})());
+ok("esitoDa: TP senza RR = null",L.esitoDa("tp",2,null)===null);
+ok("rDaEsito: esito / rischio",L.rDaEsito(3,2)===1.5&&L.rDaEsito(-1,2)===-0.5&&L.rDaEsito(1,null)===null&&L.rDaEsito(null,2)===null);
+ok("tipoEsito: riconosce TP, SL, pareggio, altro",L.tipoEsito(4,2,2)==="tp"&&L.tipoEsito(-2,2,2)==="sl"&&L.tipoEsito(0,2,2)==="be"&&L.tipoEsito(1.3,2,2)==="altro"&&L.tipoEsito(null,2,2)===null);
+ok("rr: riga <-> trade",L.rowToT({...row,rr:"2.50"}).rr===2.5&&L.rowToT(row).rr===null&&L.tToRow(t({rr:2})).rr===2&&L.tToRow(t({})).rr===null);
+ok("rischio di partenza 2 % per oro e forex",L.STRAT.xau.risk===2&&L.STRAT.fx.risk===2);
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

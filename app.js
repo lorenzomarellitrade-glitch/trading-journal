@@ -1,8 +1,9 @@
 // Journal di Lore: interfaccia + archivio su Supabase. La logica pura sta in logica.js (JL).
 (function(){
-const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf}=window.JL;
+const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const today=new Date(); const TK=dk(today);
+const num=v=>v!=null&&v!==""&&isFinite(v);
 const $=id=>document.getElementById(id);
 
 /* ===== ARCHIVIO (Supabase) ===== */
@@ -56,7 +57,7 @@ function vHome(){
     <ol class="steps">${checkTable(T,"xau").map((c,i)=>`<li><i>${i+1}</i><span>${esc(c.k)}<br><small>${esc(c.tf)}</small></span><span class="wr">${c.with.n?c.with.wr.toFixed(0)+" %":"—"}</span></li>`).join("")}</ol></section>
   </div>
   <div class="col">
-   ${open?`<section class="blk" style="border-color:rgba(242,184,75,.45)"><div class="lab"><span>Trade aperto</span><span>${open.d===TK?"oggi":fmtD(open.d)}</span></div><div class="big">${STRAT[open.s].sym} <small>${open.dir} · rischio ${open.risk==null?"—":String(open.risk).replace(".",",")+" %"}</small></div><div class="note">checklist ${open.check.filter(Boolean).length}/5${open.conf.length?" · "+esc(open.conf.join(", ")):""}</div><button type="button" class="cta" style="margin-top:12px" data-close="${open.id}">Chiudi il trade</button></section>`:""}
+   ${open?`<section class="blk" style="border-color:rgba(242,184,75,.45)"><div class="lab"><span>Trade aperto</span><span>${open.d===TK?"oggi":fmtD(open.d)}</span></div><div class="big">${STRAT[open.s].sym} <small>${open.dir} · rischio ${open.risk==null?"—":String(open.risk).replace(".",",")+" %"}${open.rr!=null?" · "+fmtRR(open.rr):""}</small></div><div class="note">checklist ${open.check.filter(Boolean).length}/5${open.conf.length?" · "+esc(open.conf.join(", ")):""}</div><button type="button" class="cta" style="margin-top:12px" data-close="${open.id}">Chiudi il trade</button></section>`:""}
    <section class="blk"><div class="lab"><span>L'ultima lezione</span><span>${last?fmtD(last.d):""}</span></div><p class="quote">${esc(last?last.less:"La scrivi quando chiudi un trade: una riga.")}<small>${last?STRAT[last.s].sym+" · "+pct(last.res):""}</small></p></section>
    <section class="blk"><div class="lab"><span>Questa settimana</span><a href="#calendario">Calendario →</a></div>
     <div class="kpis"><div class="kpi"><b>${sw.n}</b><span>trade</span></div><div class="kpi"><b>${sw.n?sw.wr.toFixed(0)+" %":"—"}</b><span>win rate</span></div><div class="kpi"><b>${wk.filter(t=>t.piano!==false).length}/${sw.n}</b><span>piano ok</span></div></div></section>
@@ -126,17 +127,17 @@ let F=null, saving=false;
 function openNew(dateKey,id,mode){
   const t=id?T.find(x=>x.id===id):null;
   const nowH=today.getHours()+today.getMinutes()/60;
-  F=t?JSON.parse(JSON.stringify(t)):{s:"xau",dir:"long",d:dateKey||TK,ora:pad(today.getHours())+":"+pad(today.getMinutes()),ses:sessFor(nowH),risk:STRAT.xau.risk,check:[0,0,0,0,0],conf:[],prima:preStato,dopo:null,piano:null,res:null,r:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
-  F.mode=t?(mode||(t.open?"close":"edit")):"new";F.pending=[];F.drop=[];F.confirmDel=false;
+  F=t?JSON.parse(JSON.stringify(t)):{s:"xau",dir:"long",d:dateKey||TK,ora:pad(today.getHours())+":"+pad(today.getMinutes()),ses:sessFor(nowH),risk:STRAT.xau.risk,check:[0,0,0,0,0],conf:[],prima:preStato,dopo:null,piano:null,res:null,r:null,rr:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
+  F.mode=t?(mode||(t.open?"close":"edit")):"new";F.rrTxt=fmtRR(F.rr);F.out=F.mode==="close"?null:tipoEsito(F.res,F.risk,F.rr);F.pending=[];F.drop=[];F.confirmDel=false;
   renderSheet();$("sheet").scrollTop=0;
 }
 const stateBtns=(attr,cur)=>`<div class="states">${STATI.map(([k,d])=>`<button type="button" data-${attr}="${esc(k)}" class="${cur===k?"on":""}">${esc(k)}<small>${esc(d)}</small></button>`).join("")}</div>`;
 function renderSheet(){
-  const st=STRAT[F.s],done=F.check.filter(Boolean).length,n=st.check.length,M=F.mode;
+  const st=STRAT[F.s],done=F.check.filter(Boolean).length,n=st.check.length,M=F.mode,lv=livelli(F.risk,num(F.rr)?F.rr:null);
   const imgs=F.imgs.filter(p=>!F.drop.includes(p));
   const thumbs=[...imgs.map(p=>`<div><img alt="" data-path="${esc(p)}"><button type="button" data-rmimg="${esc(p)}" aria-label="Togli">×</button></div>`),...F.pending.map((b,i)=>`<div><img alt="" src="${b.url}"><button type="button" data-rmpend="${i}" aria-label="Togli">×</button></div>`)];
   const summary=`<div class="card"><h4>Il trade in sintesi</h4><div class="sum">
-    <div><span>strumento</span><b>${st.sym} · ${F.dir}</b></div><div><span>quando</span><b>${fmtD(F.d)}${F.ora?" · "+esc(F.ora):""}</b></div><div><span>sessione</span><b>${esc(F.ses||"—")}</b></div><div><span>rischio</span><b>${F.risk==null?"—":String(F.risk).replace(".",",")+" %"}</b></div>
+    <div><span>strumento</span><b>${st.sym} · ${F.dir}</b></div><div><span>quando</span><b>${fmtD(F.d)}${F.ora?" · "+esc(F.ora):""}</b></div><div><span>sessione</span><b>${esc(F.ses||"—")}</b></div><div><span>rischio</span><b>${F.risk==null?"—":String(F.risk).replace(".",",")+" %"}${num(F.rr)?" · "+fmtRR(F.rr):""}</b></div>
     <div><span>checklist</span><b class="${done===n?"ok":"no"}">${done}/${n}${done===n?" · completa":""}</b></div>
     <div><span>confluenze</span><b>${F.conf.length||"—"}</b></div><div><span>immagini</span><b>${(imgs.length+F.pending.length+(F.tv?1:0))||"—"}</b></div>
     <div><span>prima</span><b>${esc(F.prima||"—")}</b></div>${M!=="new"?`<div><span>esito</span><b class="${F.res>0?"ok":F.res<0?"no":""}">${F.res==null?"—":pct(F.res)}</b></div>`:""}
@@ -144,6 +145,7 @@ function renderSheet(){
   const setup=`<section class="card"><h4><i>1</i>Cosa</h4>
      <div class="row2" style="margin-bottom:12px"><label class="fl">strategia<div class="big2"><button type="button" data-fs="xau" class="${F.s==="xau"?"on":""}">XAUUSD</button><button type="button" data-fs="fx" class="${F.s==="fx"?"on":""}">FOREX</button></div></label><label class="fl">direzione<div class="big2"><button type="button" data-fd="long" class="long ${F.dir==="long"?"on":""}">▲ long</button><button type="button" data-fd="short" class="short ${F.dir==="short"?"on":""}">▼ short</button></div></label></div>
      <div class="row3"><label class="fl">data<input type="date" value="${F.d}" data-ff="d"></label><label class="fl">orario di entrata<input type="time" value="${esc(F.ora||"")}" data-ff="ora"></label><label class="fl">rischio sul conto, %<input type="number" step="0.1" value="${F.risk==null?"":F.risk}" data-ff="risk"></label></div>
+     <div class="row3" style="margin-top:12px"><label class="fl">RR<input type="text" inputmode="decimal" autocomplete="off" value="${esc(F.rrTxt||"")}" data-ff="rrTxt" placeholder="1:2" class="${Number.isNaN(F.rr)?"bad":""}"></label><label class="fl">stop loss, %<input type="text" readonly tabindex="-1" class="calc no" value="${lv.sl==null?"—":pct(lv.sl)}" data-calc="sl"></label><label class="fl">take profit, %<input type="text" readonly tabindex="-1" class="calc ok" value="${lv.tp==null?"—":pct(lv.tp)}" data-calc="tp"></label></div>${Number.isNaN(F.rr)?`<div class="note" style="margin:6px 0 0;color:var(--loss)">RR da scrivere così: 1:2 (anche 1:2,5)</div>`:""}
      <label class="fl" style="margin-top:12px">sessione<div class="chips">${SESSOPT.map(x=>`<button type="button" data-fse="${esc(x)}" class="${F.ses===x?"on":""}">${esc(x)}</button>`).join("")}</div></label></section>
    <section class="card"><h4><i>2</i>La checklist ${st.n}<span>${done}/${n}</span></h4><div class="check">${st.check.map((c,i)=>`<button type="button" data-fc="${i}" class="${F.check[i]?"on":""}"><i>${F.check[i]?"✓":""}</i><span>${esc(c[0])}${c[1]?`<small>${esc(c[1])}</small>`:""}</span><em>${esc(c[2])}</em></button>`).join("")}</div><div class="prog"><i style="width:${done/n*100}%"></i></div></section>
    <section class="card"><h4><i>3</i>Confluenze oltre la checklist<span>quello che vede il tuo occhio</span></h4><div class="chips">${[...new Set([...CONF,...F.conf])].map(c=>`<button type="button" data-fk="${esc(c)}" class="${F.conf.includes(c)?"on":""}">${esc(c)}</button>`).join("")}</div>
@@ -151,7 +153,8 @@ function renderSheet(){
    <section class="card"><h4><i>4</i>Screenshot<span>incolla, trascina o scegli</span></h4><div class="drop" id="drop">${thumbs.length?`<div class="thumbs">${thumbs.join("")}</div>`:""}<span><kbd>⌘V</kbd> per incollare dagli appunti, trascina qui, oppure <u>scegli un file</u>.</span><input type="file" id="fileIn" accept="image/*" multiple></div>
     <label class="fl" style="margin-top:12px">link TradingView (condividi → copia link)<input type="text" value="${esc(F.tv||"")}" data-ff="tv" placeholder="https://www.tradingview.com/x/…"></label>${F.tv?`<div class="gal" style="margin-top:10px"><a href="${esc(F.tv)}" target="_blank" rel="noopener"><img alt="" src="${esc(tvImg(F.tv))}" onerror="this.outerHTML='<span class=ph>anteprima non disponibile: il link si apre in TradingView</span>'"></a></div>`:""}</section>
    <section class="card"><h4><i>5</i>Come ero prima</h4>${stateBtns("fp",F.prima)}</section>`;
-  const closing=`<section class="card"><h4><i>${M==="edit"?6:1}</i>Esito</h4><div class="row3"><label class="fl">sul conto, %<input type="number" step="0.01" value="${F.res==null?"":F.res}" data-ff="res" placeholder="+0,80 o -0,50"></label><label class="fl">R<input type="number" step="0.1" value="${F.r==null?"":F.r}" data-ff="r" placeholder="+2,1 o -1"></label><label class="fl">piano rispettato<div class="big2"><button type="button" data-fpl="1" class="${F.piano===true?"on":""}">sì</button><button type="button" data-fpl="0" class="${F.piano===false?"on":""}">no</button></div></label></div></section>
+  const closing=`<section class="card"><h4><i>${M==="edit"?6:1}</i>Esito</h4><div class="big2 outs" style="margin-bottom:12px"><button type="button" data-fout="tp" class="long ${F.out==="tp"?"on":""}" ${lv.tp==null?"disabled title=\"manca l'RR\"":""}>TP preso<small>${lv.tp==null?"manca l'RR":pct(lv.tp)+" · +"+String(F.rr).replace(".",",")+" R"}</small></button><button type="button" data-fout="sl" class="short ${F.out==="sl"?"on":""}" ${lv.sl==null?"disabled":""}>SL preso<small>${lv.sl==null?"manca il rischio":pct(lv.sl)+" · -1 R"}</small></button><button type="button" data-fout="be" class="${F.out==="be"?"on":""}">pareggio<small>0 % · 0 R</small></button><button type="button" data-fout="altro" class="${F.out==="altro"?"on":""}">altro<small>chiusura a mano</small></button></div>
+   <div class="row3">${F.out==="altro"?`<label class="fl">sul conto, %<input type="number" step="0.01" value="${F.res==null?"":F.res}" data-ff="res" placeholder="+0,80 o -0,50"></label><label class="fl">R${num(F.risk)?" (esito / rischio)":""}<input type="number" step="0.1" value="${F.r==null?"":F.r}" data-ff="r" placeholder="+2,1 o -1"></label>`:`<div class="fl" style="display:flex;flex-direction:column;gap:5px">esito<b class="${F.res>0?"ok":F.res<0?"no":""}" style="font-size:20px;padding:8px 0">${F.res==null?"—":pct(F.res)}${F.r==null?"":" · "+(F.r>0?"+":"")+String(F.r).replace(".",",")+" R"}</b></div><div></div>`}<label class="fl">piano rispettato<div class="big2"><button type="button" data-fpl="1" class="${F.piano===true?"on":""}">sì</button><button type="button" data-fpl="0" class="${F.piano===false?"on":""}">no</button></div></label></div></section>
    <section class="card"><h4><i>${M==="edit"?7:2}</i>Come ero</h4><div class="row2"><div><div class="note" style="margin:0 0 8px">prima</div>${stateBtns("fp",F.prima)}</div><div><div class="note" style="margin:0 0 8px">durante e dopo</div>${stateBtns("fo",F.dopo)}</div></div></section>
    <section class="card"><h4><i>${M==="edit"?8:3}</i>La lezione<span>una riga, anche dettata</span></h4><textarea data-ff="less" placeholder="cosa dipendeva da me? cosa rifaccio uguale?">${esc(F.less)}</textarea></section>`;
   const gallery=M==="close"&&(imgs.length||F.tv)?`<section class="card"><h4>Le immagini</h4><div class="gal">${imgs.map(p=>`<a href="#" data-big="${esc(p)}"><img alt="" data-path="${esc(p)}"></a>`).join("")}${F.tv?`<a href="${esc(F.tv)}" target="_blank" rel="noopener"><img alt="" src="${esc(tvImg(F.tv))}" onerror="this.outerHTML='<span class=ph>apri in TradingView</span>'"></a>`:""}</div></section>`:"";
@@ -166,10 +169,11 @@ function closeSheet(){F&&F.pending.forEach(b=>URL.revokeObjectURL(b.url));$("she
 function addPending(file){if(!F||!/^image\//.test(file.type))return;F.pending.push({blob:file,url:URL.createObjectURL(file)});renderSheet()}
 async function commitSheet(){
   if(saving)return;const M=F.mode;
-  if(M==="close"&&(F.res==null||isNaN(F.res))){toast("Manca l'esito in %.");return}
+  if(Number.isNaN(F.rr)){toast("RR non valido: scrivilo tipo 1:2.");return}
+  if((M==="close"||(M==="edit"&&!F.open))&&(F.res==null||isNaN(F.res))){toast("Manca l'esito: TP, SL, pareggio o altro.");return}
   saving=true;$("saveSheet").classList.add("busy");
-  const t={...F};delete t.mode;delete t.pending;delete t.drop;delete t.confirmDel;
-  if(M==="close"){t.open=false;if(t.r==null)t.r=t.res>0?2:-1;if(t.piano==null)t.piano=true}
+  const t={...F};delete t.mode;delete t.pending;delete t.drop;delete t.confirmDel;delete t.rrTxt;delete t.out;
+  if(M==="close"){t.open=false;if(t.r==null)t.r=rDaEsito(t.res,t.risk);if(t.r==null)t.r=t.res>0?2:-1;if(t.piano==null)t.piano=true}
   if(M==="edit"&&F.reopen){t.open=true}
   if(F.drop.length){await sb.storage.from(BUCKET).remove(F.drop);t.imgs=t.imgs.filter(p=>!F.drop.includes(p))}
   let saved=await saveT(t);
@@ -212,6 +216,7 @@ document.addEventListener("click",async e=>{
   if(q("#addConf")){const v=$("newConf").value.trim();if(v){if(!CONF.includes(v))CONF.push(v);if(!F.conf.includes(v))F.conf.push(v);renderSheet()}return}
   const fp=q("[data-fp]");if(fp){F.prima=fp.dataset.fp;renderSheet();return}
   const fo=q("[data-fo]");if(fo){F.dopo=fo.dataset.fo;renderSheet();return}
+  const fout=q("[data-fout]");if(fout){if(fout.disabled)return;F.out=fout.dataset.fout;if(F.out==="altro"){if(F.res==null)F.r=null}else{const x=esitoDa(F.out,F.risk,num(F.rr)?F.rr:null);if(x){F.res=x.res;F.r=x.r}}renderSheet();return}
   const fpl=q("[data-fpl]");if(fpl){F.piano=fpl.dataset.fpl==="1";renderSheet();return}
   const ri=q("[data-rmimg]");if(ri){F.drop.push(ri.dataset.rmimg);renderSheet();return}
   const rp=q("[data-rmpend]");if(rp){const b=F.pending.splice(+rp.dataset.rmpend,1)[0];URL.revokeObjectURL(b.url);renderSheet();return}
@@ -223,7 +228,7 @@ document.addEventListener("click",async e=>{
   if(q("#saveSheet")){await commitSheet();return}
 });
 document.addEventListener("change",e=>{if(e.target.id==="fileIn"&&F){[...e.target.files].forEach(addPending)}});
-document.addEventListener("input",e=>{if(!F)return;const f=e.target.dataset.ff;if(!f)return;const v=e.target.value;if(f==="res"||f==="r"||f==="risk")F[f]=v===""?null:+v;else F[f]=v;if(f==="ora"&&v){const [h,m]=v.split(":").map(Number);F.ses=sessFor(h+m/60)}if(f==="less")return;const sel=document.activeElement,id=sel&&sel.dataset.ff;renderSheet();if(id){const el=document.querySelector(`[data-ff="${id}"]`);if(el){el.focus();if(el.type==="text"||el.type==="number")try{el.setSelectionRange(el.value.length,el.value.length)}catch(x){}}}});
+document.addEventListener("input",e=>{if(!F)return;const f=e.target.dataset.ff;if(!f)return;const v=e.target.value;if(f==="res"||f==="r"||f==="risk")F[f]=v===""?null:+v;else F[f]=v;if(f==="rrTxt")F.rr=parseRR(v);if(f==="res")F.r=rDaEsito(F.res,F.risk);if((f==="risk"||f==="rrTxt")&&F.out&&F.out!=="altro"){const x=esitoDa(F.out,F.risk,num(F.rr)?F.rr:null);if(x){F.res=x.res;F.r=x.r}else{F.res=null;F.r=null}}if(f==="risk"&&F.out==="altro")F.r=rDaEsito(F.res,F.risk);if(f==="ora"&&v){const [h,m]=v.split(":").map(Number);F.ses=sessFor(h+m/60)}if(f==="less")return;const sel=document.activeElement,id=sel&&sel.dataset.ff;renderSheet();if(id){const el=document.querySelector(`[data-ff="${id}"]`);if(el){el.focus();if(el.type==="text"||el.type==="number")try{el.setSelectionRange(el.value.length,el.value.length)}catch(x){}}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheet();$("pop").hidden=true}});
 document.addEventListener("paste",e=>{if(!F||F.mode==="close")return;const items=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file"&&/^image\//.test(i.type));if(items.length){e.preventDefault();items.forEach(i=>addPending(i.getAsFile()));toast("Screenshot aggiunto.")}});
 document.addEventListener("dragover",e=>{if(F){e.preventDefault()}});

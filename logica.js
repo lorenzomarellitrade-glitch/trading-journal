@@ -8,8 +8,8 @@ const fmtD=k=>String(k).split("-").reverse().join(".");
 
 /* Strategie: checklist fisse, dalle parole di Lore (2026-11-04) */
 const STRAT={
- xau:{n:"XAUUSD",sub:"intraday",sym:"XAUUSD",risk:.5,check:[["direzione multi-timeframe","D e 4H d'accordo","D · 4H"],["zona PRZ / supply-demand","il prezzo è in una zona, non in mezzo","4H"],["rifinitura della zona","","1H"],["evidence","reazione visibile nella zona","15'"],["fallimento e rottura","il pattern di entrata","5'"]]},
- fx:{n:"FOREX",sub:"swing",sym:"FOREX",risk:.4,check:[["direzione multi-timeframe","W e D d'accordo","W · D"],["AOI, area di interesse","","W · D · 4H"],["livello psicologico dentro la AOI","","AOI"],["evidence","","4H"],["entry","","1H"]]}
+ xau:{n:"XAUUSD",sub:"intraday",sym:"XAUUSD",risk:2,check:[["direzione multi-timeframe","D e 4H d'accordo","D · 4H"],["zona PRZ / supply-demand","il prezzo è in una zona, non in mezzo","4H"],["rifinitura della zona","","1H"],["evidence","reazione visibile nella zona","15'"],["fallimento e rottura","il pattern di entrata","5'"]]},
+ fx:{n:"FOREX",sub:"swing",sym:"FOREX",risk:2,check:[["direzione multi-timeframe","W e D d'accordo","W · D"],["AOI, area di interesse","","W · D · 4H"],["livello psicologico dentro la AOI","","AOI"],["evidence","","4H"],["entry","","1H"]]}
 };
 const STATI=[["lucido","presente, senza fretta"],["dubito di me","esito, cerco conferme in più"],["poco concentrato","distratto, stanco"],["ci penso troppo","analisi infinita, entro tardi"]];
 const SK=STATI.map(s=>s[0]);
@@ -21,9 +21,19 @@ const mm=h=>pad(Math.floor(h))+":"+pad(Math.round((h%1)*60));
 function sessState(h){return SESS.map(([n,a,b])=>({n,a,b,on:a<b?(h>=a&&h<b):(h>=a||h<b)}))}
 
 /* Conversione riga Supabase <-> trade in memoria */
-function rowToT(r){return{id:r.id,s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
-function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,lezione:t.less||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
+function rowToT(r){return{id:r.id,s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,rr:r.rr==null?null:+r.rr,less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
+function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,rr:t.rr==null?null:+t.rr,lezione:t.less||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
 function sortT(T){return T.sort((a,b)=>(a.d+(a.ora||""))<(b.d+(b.ora||""))?-1:(a.d+(a.ora||""))>(b.d+(b.ora||""))?1:0)}
+
+/* RR e livelli (Lore, 2026-11-09): l'RR si scrive 1:2; SL e TP in % vengono dal rischio */
+const r2=v=>Math.round(v*100)/100;
+const num=v=>v!=null&&v!==""&&isFinite(v);
+function parseRR(s){if(s==null||String(s).trim()==="")return null;const t=String(s).replace(/,/g,".").replace(/\s+/g,"");const m=/^(?:(\d+(?:\.\d+)?):)?(\d+(?:\.\d+)?)$/.exec(t);if(!m)return NaN;const a=m[1]==null?1:+m[1],b=+m[2];return a>0&&b>0&&b/a<1000?r2(b/a):NaN}
+function fmtRR(rr){return num(rr)?"1:"+String(+rr).replace(".",","):""}
+function livelli(risk,rr){return{sl:num(risk)?-r2(+risk):null,tp:num(risk)&&num(rr)?r2(risk*rr):null}}
+function esitoDa(tipo,risk,rr){if(tipo==="be")return{res:0,r:0};if(!num(risk))return null;if(tipo==="sl")return{res:-r2(+risk),r:-1};if(tipo==="tp"&&num(rr))return{res:r2(risk*rr),r:r2(+rr)};return null}
+function rDaEsito(res,risk){return num(res)&&num(risk)&&+risk!==0?r2(res/risk):null}
+function tipoEsito(res,risk,rr){if(!num(res))return null;if(+res===0)return"be";const l=livelli(risk,rr);if(l.sl!=null&&r2(+res)===l.sl)return"sl";if(l.tp!=null&&r2(+res)===l.tp)return"tp";return"altro"}
 
 /* Immagine di TradingView da un link "condividi" (tradingview.com/x/ID/) */
 function tvImg(link){const m=/tradingview\.com\/x\/([A-Za-z0-9]+)/.exec(link||"");if(!m)return"";const id=m[1];return"https://s3.tradingview.com/snapshots/"+id[0].toLowerCase()+"/"+id+".png"}
@@ -41,6 +51,6 @@ function curve(list){let a=0;return list.map(t=>a+=t.res)}
 function serieP(T){let n=0;for(const t of closedOf(T).slice().reverse()){if(t.piano!==false)n++;else break}return n}
 function weekOf(T,today){const mon=new Date(today);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const k=dk(mon);return T.filter(t=>!t.open&&t.d>=k)}
 
-const L={pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf};
+const L={pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);
