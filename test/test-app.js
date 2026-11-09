@@ -87,6 +87,26 @@ try{
  await clk($("#delAsk"));ok("elimina: chiede conferma",!!$("#delYes"));
  await clk($("#delYes"));await W(150);
  ok("elimina: riga tolta e immagini rimosse",window.__rows.length===N&&window.__W.some(w=>w[0]==="remove")&&$("#sheet").hidden);
+ // ---- DUE POSIZIONI (forex: 2 % = 1 % a TP1 1:1 + 1 % a TP finale)
+ await go("#nuovo");await clk($('[data-fs="fx"]'));
+ ok("due posizioni: sul forex parte con due posizioni",$('[data-fpos="2"]').classList.contains("on")&&$('[data-ff="p1r"]').value==="1"&&$('[data-calc="r2"]').value==="1"&&$('[data-ff="p1rr"]').value==="1:1");
+ await typ('[data-ff="rrTxt"]',"1:3");ok("due posizioni: TP1 +1 %, TP +3 %, stop -2 %",$('[data-calc="tp1"]').value==="+1,00 %"&&$('[data-calc="tp2"]').value==="+3,00 %"&&/-2,00 %/.test($('[data-calc="sl"]').textContent));
+ await typ('[data-ff="p1r"]',"1.5");ok("due posizioni: divisione 1,5 + 0,5",$('[data-calc="r2"]').value==="0,5"&&$('[data-calc="tp2"]').value==="+1,50 %");
+ await typ('[data-ff="p1r"]',"2");ok("due posizioni: pos. 1 uguale al totale segnata in rosso",$('[data-ff="p1r"]').classList.contains("bad"));
+ await clk($("#saveSheet"));ok("due posizioni: con divisione sbagliata non salva",!$("#sheet").hidden&&/posizione 1/.test($("#toast").textContent));
+ await typ('[data-ff="p1r"]',"1");ok("due posizioni: riepilogo",/2 posizioni · 1:1 \/ 1:3/.test($(".sum").textContent));
+ await clk($("#saveSheet"));await W(250);
+ const ins2=window.__W.filter(w=>w[0]==="insert").slice(-1)[0][1];
+ ok("due posizioni: riga salvata",ins2.strategia==="fx"&&ins2.rischio===2&&ins2.rr===3&&ins2.posizioni&&ins2.posizioni.rischio1===1&&ins2.posizioni.rr1===1&&ins2.posizioni.esito1===null,JSON.stringify(ins2));
+ await go("#home");ok("due posizioni: home con le due posizioni",/2 posizioni · 1:1 \/ 1:3/.test($("#view").textContent));
+ await clk($("[data-close]"));ok("due posizioni: chiusura con due file di pulsanti",$$("[data-po1]").length===3&&$$("[data-po2]").length===4);
+ await clk($('[data-po1="tp"]'));await clk($("#saveSheet"));ok("due posizioni: con una sola posizione scelta non chiude",!$("#sheet").hidden&&/Manca l'esito/.test($("#toast").textContent));
+ await clk($('[data-po2="be"]'));ok("due posizioni: TP1 + pareggio = +1 %, +0,5 R",/\+1,00 % · \+0,5 R/.test($("#sheetIn").textContent));
+ await clk($('[data-po2="altro"]'));$('[data-ff="p2res"]').focus();await typ('[data-ff="p2res"]',"1.5");ok("due posizioni: TP1 + altro 1,5 = +2,5 %, +1,25 R",/\+2,50 % · \+1,25 R/.test($("#sheetIn").textContent)&&document.activeElement===$('[data-ff="p2res"]'));
+ await clk($('[data-po2="tp"]'));ok("due posizioni: TP1 + TP = +4 %, +2 R",/\+4,00 % · \+2 R/.test($("#sheetIn").textContent));
+ await clk($("#saveSheet"));await W(200);
+ const cl2=window.__W.filter(w=>w[0]==="update").slice(-1)[0][1];
+ ok("due posizioni: riga chiusa",cl2.esito_pct===4&&cl2.r===2&&cl2.aperto===false&&cl2.posizioni.esito1==="tp"&&cl2.posizioni.esito2==="tp"&&cl2.posizioni.esito2_pct===null,JSON.stringify(cl2));
  // ---- STATISTICHE
  await go("#statistiche");
  ok("statistiche: 4 blocchi e grafici",$$(".blk").length===5&&$$("svg").length>=1);

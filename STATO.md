@@ -9,3 +9,5 @@ _Aggiornato: 2026-11-09_
 **2026-11-04 (Lore):** il journal personale si rifà da zero; questa cartella lo ospita (prima era l'app React, ora in storia git).
 
 **2026-11-09 (Lore):** apertura con rischio % (precompilato 2 %) e RR scritto `1:2`; SL e TP in % li calcola il journal. Chiusura a pulsanti: TP preso / SL preso / pareggio / altro (esito a mano, R = esito / rischio). Colonna nuova `rr`: `supabase/2026-11-09-rr.sql` da eseguire nel SQL Editor PRIMA del deploy. Test: 43 logica + 161 interfaccia, verdi. SQL eseguito da Lore e journal pubblicato il 2026-11-09, controllato online. Prossimo passo: Lore apre e chiude il primo trade vero con RR.
+
+**2026-11-09 (Lore), due posizioni:** trade diviso in due (di base 1 % + 1 %, modificabile): pos. 1 a TP1 (1:1), pos. 2 al TP finale; chiusura a pulsanti per posizione, esito e R totali calcolati. Sul FOREX parte con due posizioni. Colonna `posizioni` (jsonb): `supabase/2026-11-09-posizioni.sql` da eseguire PRIMA del deploy. Test: 54 logica + 209 interfaccia, verdi; revisore fatto.

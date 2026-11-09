@@ -5,7 +5,7 @@ Journal di trading personale di Lore, rifatto il 2026-11-05 al posto dell'app Re
 ## Cosa fa
 - Due strategie con checklist fissa a 5 voci: **XAUUSD** (direzione MTF, PRZ 4H, rifinitura 1H, evidence 15', fallimento e rottura 5') e **FOREX** (direzione MTF, AOI W-D-4H, livello psicologico, evidence 4H, entry 1H). Le voci stanno in `logica.js` (`STRAT`) e si cambiano solo con l'OK di Lore.
 - Risultati **solo in % sul conto e in R**, mai in soldi.
-- **Rischio e RR (Lore, 2026-11-09):** in apertura rischio % (precompilato 2 %) e RR scritto `1:2`; SL % e TP % calcolati. In chiusura TP / SL / pareggio / altro; esito e R si compilano da soli.
+- **Rischio e RR (Lore, 2026-11-09):** in apertura rischio % (precompilato 2 %) e RR scritto `1:2`; SL % e TP % calcolati. In chiusura TP / SL / pareggio / altro; esito e R si compilano da soli. **Due posizioni:** rischio diviso (di base a metà), pos. 1 a TP1 (1:1), pos. 2 al TP finale; sul FOREX è la scelta di partenza.
 - Stato di Lore prima e dopo: lucido · dubito di me · poco concentrato · ci penso troppo. Confluenze libere, analizzate con/senza.
 - Home da tenere aperta in sessione: orologio, sessioni, le due finestre di Lore (8:00-10:30, 16:30-19:00), come arrivo alla sessione, checklist con win rate, trade aperto, ultima lezione.
 - Calendario: tocco sul giorno = nuovo trade con quella data. Lista trade a quadrotti o lista con immagine.
@@ -18,7 +18,7 @@ index.html      pagina, CSS, login, impostazioni
 logica.js       funzioni pure (statistiche, sessioni, conversioni riga<->trade): JL in browser, module in node
 app.js          interfaccia, scheda del trade, archivio Supabase, immagini
 config.js       URL e chiave anon (generato da deploy.sh, non versionato) · config.example.js
-supabase/       schema-2026-11-journal.sql: tabella journal_trade, trigger, RLS, bucket screenshot · 2026-11-09-rr.sql: colonna rr
+supabase/       schema-2026-11-journal.sql: tabella journal_trade, trigger, RLS, bucket screenshot · 2026-11-09-rr.sql: colonna rr · 2026-11-09-posizioni.sql: colonna posizioni
 test/           esegui.sh, test-logica.js, mock-supabase.js, dati-finti.js, test-app.js
 deploy.sh       test → dist/ con config.js da .env → push forzato su gh-pages
 ```

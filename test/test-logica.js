@@ -53,4 +53,17 @@ ok("rDaEsito: esito / rischio",L.rDaEsito(3,2)===1.5&&L.rDaEsito(-1,2)===-0.5&&L
 ok("tipoEsito: riconosce TP, SL, pareggio, altro",L.tipoEsito(4,2,2)==="tp"&&L.tipoEsito(-2,2,2)==="sl"&&L.tipoEsito(0,2,2)==="be"&&L.tipoEsito(1.3,2,2)==="altro"&&L.tipoEsito(null,2,2)===null);
 ok("rr: riga <-> trade",L.rowToT({...row,rr:"2.50"}).rr===2.5&&L.rowToT(row).rr===null&&L.tToRow(t({rr:2})).rr===2&&L.tToRow(t({})).rr===null);
 ok("rischio di partenza 2 % per oro e forex",L.STRAT.xau.risk===2&&L.STRAT.fx.risk===2);
+// Due posizioni (Lore, 2026-11-09): 2 % = 1 % a TP1 (1:1) + 1 % a TP finale
+const P=(o)=>({r1:1,rr1:1,o1:null,o2:null,res2:null,...o});
+ok("livelli2: 2 % diviso 1+1, TP1 1:1, TP 1:3",(()=>{const v=L.livelli2(2,P({}),3);return v.r2===1&&v.tp1===1&&v.sl1===-1&&v.tp2===3&&v.sl2===-1&&v.sl===-2})());
+ok("livelli2: divisione 1,5 + 0,5",(()=>{const v=L.livelli2(2,P({r1:1.5}),3);return v.r2===0.5&&v.tp1===1.5&&v.tp2===1.5&&v.sl===-2})());
+ok("livelli2: senza RR finale TP2 = null",L.livelli2(2,P({}),null).tp2===null);
+ok("esito2: TP1 + TP = +4 %, +2 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"tp"}),3);return e.res===4&&e.r===2})());
+ok("esito2: TP1 + pareggio = +1 %, +0,5 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"be"}),3);return e.res===1&&e.r===0.5})());
+ok("esito2: due stop = -2 %, -1 R",(()=>{const e=L.esito2(2,P({o1:"sl",o2:"sl"}),3);return e.res===-2&&e.r===-1})());
+ok("esito2: TP1 + altro +1,5 % = +2,5 %, +1,25 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"altro",res2:1.5}),3);return e.res===2.5&&e.r===1.25})());
+ok("esito2: manca una posizione = null",L.esito2(2,P({o1:"tp"}),3)===null&&L.esito2(2,P({o1:"tp",o2:"altro"}),3)===null);
+ok("esito2: TP senza RR = null",L.esito2(2,P({o1:"tp",o2:"tp"}),null)===null);
+ok("posizioni: riga <-> trade",(()=>{const r=L.tToRow(t({risk:2,rr:3,pos:P({o1:"tp",o2:"altro",res2:1.5})}));const b=L.rowToT({...row,posizioni:r.posizioni});return r.posizioni.rischio1===1&&r.posizioni.esito2==="altro"&&r.posizioni.esito2_pct===1.5&&b.pos.r1===1&&b.pos.rr1===1&&b.pos.o1==="tp"&&b.pos.res2===1.5})());
+ok("posizioni: posizione unica = null",L.tToRow(t({})).posizioni===null&&L.rowToT(row).pos===null);
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);
