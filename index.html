@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0A0A0A">
+<meta name="theme-color" content="#090807">
 <meta name="color-scheme" content="dark">
 <title>Journal di Lore</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -310,6 +310,111 @@ input.calc.ok{color:var(--win)}input.calc.no{color:var(--loss)}
 .btn.gh{background:var(--g2);border:1px solid var(--line)}
 .cal .d .dots i.n{background:var(--mute);width:5px;height:5px}
 @media(max-width:640px){.hd{flex-wrap:wrap;gap:10px}.hd .nav{order:3;flex-basis:100%;overflow-x:auto}#hdDate{display:none}.sside .blk:nth-child(n+3){display:none}.fe{grid-template-columns:1fr}.fe .fo{text-align:left;padding:0}}
+
+/* ---- liquid glass, palette candela (Lore, 2026-11-11): vetro al massimo della trasparenza, stanza calda in penombra ---- */
+:root,:root[data-pal="mono"]{--a1:.03;--a2:.006;--bl:4px;--lu:.4;--om:.2;--al:1;--t1:.07;--b1:.045;--b2:.012;--bb:7px;--sm:.02;--in:.06;--sh:.18;--sb:10px;
+  --h1:rgba(255,190,130,.09);--h2:rgba(255,180,125,.06);--h3:rgba(245,160,90,.25);--h4:rgba(250,185,115,.21);--c1:#F5EBD6;--c2:#DCC9A4;--cg:rgba(240,190,130,.16)}
+
+:root,:root[data-pal="mono"]{--bg:#06070A;--g1:rgba(255,255,255,.055);--g2:rgba(255,255,255,.10);--line:rgba(255,255,255,.10);--line-hi:rgba(255,255,255,.22);--ink:#F4F5F8;--mute:#A4A9B8;--dim:#6B7182;--acc:#FFFFFF;--acc-ink:#08090C;--acc-soft:rgba(255,255,255,.14);--win:#7EE2A8;--loss:#FF7A88;--amber:#F5C968;--shade:rgba(4,5,8,.45);--r:24px;
+  --vetro:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
+  --luce:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.05),inset 0 0 0 1px rgba(255,255,255,.04),0 14px 44px rgba(0,0,0,.38);
+  --sfoca:blur(30px) saturate(180%)}
+html{background:var(--bg)}
+body,:root[data-pal="mono"] body{background:transparent;background-image:none}
+body::before{content:"";position:fixed;inset:-10%;z-index:-1;pointer-events:none;background:
+  radial-gradient(620px 460px at 12% 8%,rgba(96,132,255,.34),transparent 62%),
+  radial-gradient(560px 480px at 88% 18%,rgba(180,110,255,.20),transparent 64%),
+  radial-gradient(700px 520px at 72% 92%,rgba(60,200,190,.20),transparent 62%),
+  radial-gradient(520px 420px at 18% 96%,rgba(255,160,110,.12),transparent 64%),
+  var(--bg)}
+/* barra in alto: pillola che galleggia */
+.hd{top:calc(env(safe-area-inset-top,0px) + 12px);margin-top:12px;margin-bottom:22px;padding:9px 12px 9px 22px;border:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:999px;background:var(--vetro);backdrop-filter:var(--sfoca);-webkit-backdrop-filter:var(--sfoca);box-shadow:var(--luce)}
+.hd h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.nav a{border-radius:999px;padding:7px 14px}
+.nav a.on{background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.gear{border-radius:50%}
+/* pannelli di vetro */
+.blk,.card,.ncard,.tcard,.tr,.login form,.pop,.box{background:var(--vetro);border:1px solid var(--line);backdrop-filter:var(--sfoca);-webkit-backdrop-filter:var(--sfoca);box-shadow:var(--luce)}
+.blk,.card{border-radius:var(--r);padding:20px 22px}
+.ncard{border-radius:20px;padding:14px 16px}
+.ncard.trade{background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.06));border-color:var(--line-hi)}
+.ncard.fine{border-style:solid;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02))}
+.tcard{border-radius:20px}.tr{border-radius:18px}
+.tcard:hover,.tr:hover{background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.06))}
+.pop{border-radius:22px}
+.lab{font-weight:600;letter-spacing:-.005em}
+/* tasti a pillola */
+.cta,.btn{border-radius:999px}
+.cta,.btn.pri{background:linear-gradient(180deg,#fff,#DADDE6);box-shadow:inset 0 1px 0 #fff,0 6px 22px rgba(255,255,255,.14)}
+.cta.ghost,.btn.gh{background:rgba(255,255,255,.08);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);color:var(--ink)}
+.seg{border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);padding:4px}
+.seg button{border-radius:999px}
+.seg button.on{background:rgba(255,255,255,.92);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.dnav>button:not(.cta){border-radius:50%;background:rgba(255,255,255,.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.chip{background:rgba(255,255,255,.05);padding:5px 12px}
+.chip.on{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.chips button,.big2 button,.states button{background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.big2 button,.states button{border-radius:16px}
+.big2 button.on,.states button.on,.chips button.on{border-color:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.3);background:rgba(255,255,255,.16)}
+.big2 button.long.on{border-color:var(--win);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);background:rgba(126,226,168,.16)}
+.big2 button.short.on{border-color:var(--loss);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);background:rgba(255,122,136,.16)}
+/* campi */
+input[type=text],input[type=number],input[type=date],input[type=time],textarea,.login input{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+input:focus,textarea:focus{border-color:rgba(255,255,255,.5)}
+input.calc{background:transparent;box-shadow:none}
+/* diario */
+.wins span{background:rgba(255,255,255,.05)}
+.tfb{border-radius:999px;padding:3px 10px;background:rgba(255,255,255,.12)}
+.shot,.gal a{border-radius:14px}
+.comp{background:none;padding-top:10px}
+.box{border-radius:26px;padding:12px 14px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.07));border-color:var(--line-hi);backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 -6px 50px rgba(0,0,0,.45)}
+.box textarea{background:none;border:0;box-shadow:none}
+.cora,.cin input{border-radius:999px!important}
+/* calendario */
+.cal .d{border-radius:16px;background:rgba(255,255,255,.045);box-shadow:inset 0 1px 0 rgba(255,255,255,.10)}
+.cal .d:hover{background:rgba(255,255,255,.12)}
+.cal .d.sel{border-color:rgba(255,255,255,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+/* grafici e barre */
+.hb .track,.conf .bar,.prog{background:rgba(255,255,255,.08)}
+.hb .track i{background:linear-gradient(90deg,rgba(255,255,255,.55),#fff)}
+.hb.bad .track i{background:var(--loss)}
+/* scheda del trade */
+.sheet{backdrop-filter:blur(34px) saturate(160%);-webkit-backdrop-filter:blur(34px) saturate(160%)}
+.sheet .x{background:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.card h4 i{background:rgba(255,255,255,.14)}
+.drop{border-radius:18px;background:rgba(255,255,255,.04)}
+.toast{border-radius:999px;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);box-shadow:0 10px 40px rgba(0,0,0,.5)}
+@media(max-width:640px){.hd{border-radius:26px;padding:10px 14px}}
+
+/* valori del vetro */
+:root,:root[data-pal="mono"]{--vetro:linear-gradient(180deg,rgba(255,255,255,var(--a1)),rgba(255,255,255,var(--a2)));--sfoca:blur(var(--bl)) saturate(180%);
+  --luce:inset 0 1px 0 rgba(255,255,255,var(--lu)),inset 0 -1px 0 rgba(255,255,255,.06),inset 0 0 0 1px rgba(255,255,255,.04),0 12px 40px rgba(0,0,0,var(--om))}
+body::before{opacity:var(--al);background:
+  radial-gradient(640px 480px at 12% 8%,var(--h1),transparent 62%),
+  radial-gradient(580px 500px at 88% 18%,var(--h2),transparent 64%),
+  radial-gradient(720px 540px at 72% 92%,var(--h3),transparent 62%),
+  radial-gradient(540px 440px at 18% 96%,var(--h4),transparent 64%)}
+html{background:var(--bg)}
+.cta,.btn.pri{background:linear-gradient(180deg,var(--c1),var(--c2));box-shadow:inset 0 1px 0 var(--c1),0 6px 22px var(--cg)}
+.seg button.on{background:var(--c1)}
+.hb .track i{background:linear-gradient(90deg,var(--cg),var(--c1))}
+
+.ncard.trade{background:linear-gradient(180deg,rgba(255,255,255,var(--t1)),rgba(255,255,255,var(--a2)))}
+.ncard.fine{background:linear-gradient(180deg,rgba(255,255,255,var(--a2)),transparent)}
+.box{background:linear-gradient(180deg,rgba(255,255,255,var(--b1)),rgba(255,255,255,var(--b2)));backdrop-filter:blur(var(--bb)) saturate(190%);-webkit-backdrop-filter:blur(var(--bb)) saturate(190%)}
+.cta.ghost,.btn.gh,.chip,.chips button,.big2 button,.states button,.cal .d,.seg,.dnav>button:not(.cta),.wins span{background:rgba(255,255,255,var(--sm))}
+input[type=text],input[type=number],input[type=date],input[type=time],textarea,.login input{background:rgba(0,0,0,var(--in))}
+.box textarea{background:none}
+.sheet{background:rgba(4,5,8,var(--sh));backdrop-filter:blur(var(--sb)) saturate(170%);-webkit-backdrop-filter:blur(var(--sb)) saturate(170%)}
+/* candela: luce calda dal basso che respira piano */
+body::before{animation:fiamma 9s ease-in-out infinite}
+@keyframes fiamma{0%,100%{filter:brightness(1)}23%{filter:brightness(.92)}41%{filter:brightness(1.04)}58%{filter:brightness(.95)}77%{filter:brightness(1.02)}}
+@media(prefers-reduced-motion:reduce){body::before{animation:none}}
+.hb .track i{background:linear-gradient(90deg,rgba(255,190,110,.35),var(--c1))}
+
+:root,:root[data-pal="mono"]{--bg:#090807;--win:#A9D4A6;--loss:#E48E80;--ink:#F2EDE4;--mute:#B1A99B;--dim:#777067;--amber:#EBC587;--acc:#F5EBD6;--acc-ink:#0B0907}
+/* la scelta Mono/Verde non serve più: una sola palette */
+#pop>.lab:first-child,#pop>.lab:first-child+.seg{display:none}
 </style>
 </head>
 <body>
