@@ -1,6 +1,6 @@
 // Journal di Lore: interfaccia + archivio su Supabase. La logica pura sta in logica.js (JL).
 (function(){
-const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd}=window.JL;
+const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const today=new Date(); const TK=dk(today);
 const num=v=>v!=null&&v!==""&&isFinite(v);
@@ -76,6 +76,7 @@ function vSess(){
   <aside class="sside">
    <section class="blk"><div class="clock"><b id="clk">--:--:--</b><small id="clkSess"></small></div>${sesS==="xau"?`<div class="wins" id="win"><span data-w="La mia">8:00–10:30</span><span data-w="La mia 2">16:30–19:00</span></div>`:`<div class="note">Forex: nessuna finestra, il setup decide.</div>`}</section>
    <section class="blk"><div class="lab"><span>La mia lettura</span><span>ultima nota per time frame</span></div><div class="mtf">${lt.map(({tf,n})=>n?`<div><b>${tf}</b><p title="${esc(n.txt)}">${esc(n.txt||"(solo immagine)")}${n.d!==sesD?` <em>· ${fmtD(n.d).slice(0,5)}</em>`:""}</p><i class="${n.bias||""}">${n.bias?BIAS[n.bias].slice(0,1):""}</i></div>`:`<div class="vuoto"><b>${tf}</b><p>ancora niente</p><i></i></div>`).join("")}</div></section>
+   ${(()=>{const pt=pianoTable(T,sesS).with,ls=closedOf(T,sesS).filter(t=>t.less).slice(-1)[0];return pt.n||ls?`<section class="blk"><div class="lab"><span>Promemoria</span></div>${pt.n?`<div class="mini">Quando segui il piano: <b>${pt.wr.toFixed(0)} %</b> · R medio <b>${fR(pt.avgR)}</b> · ${pt.n} trade</div>`:""}${ls?`<p class="quote" style="font-size:13px;margin-top:10px">${esc(ls.less)}<small>${fmtD(ls.d)}</small></p>`:""}</section>`:""})()}
    <section class="blk"><div class="lab"><span>Trade del giorno</span><span>${tr.length||""}</span></div><div class="mini">${tr.length?tr.map(t=>`${esc(t.ora||"--:--")} · <b>${t.dir}</b> · ${t.open?"aperto":pct(t.res)}`).join("<br>"):"Nessun trade. Anche i giorni senza trade contano."}</div></section>
   </aside></div>${compositore()}`;
 }
@@ -148,33 +149,42 @@ function vTrades(){
 
 let stS="xau";
 function vStats(){
-  const L=closedOf(T,stS),s=stats(L);const cv=curve(L);const st=statoTable(T,stS);const ct=confTable(T,stS);const al=allineamento(N,T,stS),sc=sicTable(N,T,stS),nGiorni=new Set(N.filter(n=>n.s===stS).map(n=>n.d)).size;
+  const L=closedOf(T,stS),s=stats(L),cv=curve(L),al=allineamento(N,T,stS),sc=sicTable(N,T,stS),pt=pianoTable(T,stS),ac=accordo(N,T,stS),pz=pazienza(N,T,stS),pw=parole(T,stS),pr=prove(T,stS,6),co=costanza(N,T,stS,spostaGiorno(TK,-29),TK),fi=stS==="xau"?finestre(T):null;
+  const wr=x=>x.n?x.wr.toFixed(0)+" %":"—",rm=x=>x.n?fR(x.avgR)+" R":"—";
+  const due=(a,la,b,lb)=>`<div class="kpis"><div class="kpi ${a.n&&b.n&&a.wr>b.wr?"good":""}"><b>${wr(a)}</b><span>${la} · ${a.n} trade · ${rm(a)}</span></div><div class="kpi"><b>${wr(b)}</b><span>${lb} · ${b.n} trade · ${rm(b)}</span></div></div>`;
+  const min=v=>v==null?"—":Math.round(v)+"′";
   return `<div class="col enter">
-   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="seg" style="width:260px"><button type="button" data-st="xau" class="${stS==="xau"?"on":""}">XAUUSD</button><button type="button" data-st="fx" class="${stS==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${s.n} trade chiusi · ${STRAT[stS].sub}</span></div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="seg" style="width:260px"><button type="button" data-st="xau" class="${stS==="xau"?"on":""}">XAUUSD</button><button type="button" data-st="fx" class="${stS==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${s.n} trade chiusi · ${co.giorni} giorni di diario negli ultimi 30</span></div>
    <div class="grid g-stats">
-    <section class="blk"><div class="lab"><span>Andamento · % sul conto</span><span>${pct(s.sum)} in totale</span></div>${area(cv,220,true)}<div class="axis"><span>${L[0]?fmtD(L[0].d):""}</span><span>${L.length?fmtD(L[L.length-1].d):""}</span></div></section>
-    <section class="blk"><div class="lab"><span>Vinti e persi</span></div>
-     <div class="donut"><div class="c">${donut(s.wr)}<div><b>${s.n?s.wr.toFixed(0)+" %":"—"}</b><small>win rate</small></div></div><div class="legend"><div><span><i style="background:var(--win)"></i>vinti</span><b>${s.w}</b></div><div><span><i style="background:var(--loss)"></i>persi</span><b>${s.l}</b></div><div><span><i style="background:var(--acc)"></i>R medio</span><b>${s.n?fR(s.avgR):"—"}</b></div><div><span><i style="background:var(--amber)"></i>profit factor</span><b>${!s.n?"—":s.pf===Infinity?"∞":s.pf.toFixed(2).replace(".",",")}</b></div></div></div></section>
+    <section class="blk hi"><div class="lab"><span>Quando segui il piano</span><span>win rate · R medio</span></div>${pt.with.n+pt.without.n?due(pt.with,"da piano",pt.without,"fuori piano")+`<div class="note">${pt.with.n&&pt.without.n?(pt.with.wr>=pt.without.wr?"Il piano ti dà ragione: i numeri migliori arrivano quando fai il tuo.":"Per ora fuori piano va meglio: è un segnale da guardare con Sara, non da ignorare."):"Servono trade dentro e fuori piano per il confronto."}</div>`:`<div class="empty">Compare con i primi trade chiusi: alla chiusura segni se hai seguito il piano.</div>`}</section>
+    <section class="blk"><div class="lab"><span>Tutti i time frame d'accordo</span><span>almeno 2 letture con bias</span></div>${ac.with.n+ac.without.n?due(ac.with,"tutti d'accordo",ac.without,"letture miste")+`<div class="note">Conta le letture rialzo/ribasso valide al momento dell'entrata.</div>`:`<div class="empty">Compare quando entri dopo aver scritto il bias su almeno due time frame.</div>`}</section>
    </div>
    <div class="grid g-stats">
-    <section class="blk"><div class="lab"><span>I time frame: trade a favore del bias</span><span>barra = win rate a favore · tacca = contro</span></div>
-     ${al.length?`<div class="hbars">${al.map(hbar).join("")}</div><div class="note">Per ogni trade chiuso conta l'ultima lettura scritta prima di entrare, con l'orario (Weekly valida 7 giorni, Daily 3, gli altri il giorno stesso); se è neutra il trade non conta. Il numero è il numero di trade a favore.</div>`:`<div class="empty">Compare quando ci sono trade chiusi e, prima, note con il bias segnato.</div>`}</section>
-    <div class="col">
-     <section class="blk"><div class="lab"><span>Sicurezza a fine sessione</span><span>win rate di quei giorni</span></div>
-      ${sc.length?`<div class="vbars">${sc.map(x=>`<div class="vb ${x.n&&x.wr>=55?"good":x.n&&x.wr<45?"bad":""}"><b>${x.n?x.wr.toFixed(0)+" %":"—"}</b><i style="height:${Math.max(6,x.n?x.wr:0)}%"></i><span>${x.k}/5<br>${x.giorni} gg · ${x.n} trade</span></div>`).join("")}</div>`:`<div class="empty">Chiudi la sessione con la sicurezza da 1 a 5: qui vedrai se la tua sensazione ha ragione.</div>`}</section>
-     <section class="blk"><div class="lab"><span>Resoconto con Sara</span><span>${nGiorni} giorni di diario</span></div><div class="note" style="margin:0 0 10px">Scarica gli ultimi 30 giorni (note, trade, link alle immagini validi 7 giorni) e passa il file a Sara: lo legge con il coach di trading e ti dice che pattern vede.</div><button type="button" class="cta ghost sm" data-exp>Scarica per Sara · ${STRAT[stS].n}</button></section>
-    </div>
+    <section class="blk"><div class="lab"><span>Ogni time frame: trade a favore del bias</span><span>barra = a favore · tacca = contro</span></div>
+     ${al.length?`<div class="hbars">${al.map(hbar).join("")}</div><div class="note">Per ogni trade chiuso conta l'ultima lettura scritta prima di entrare, con l'orario (Weekly valida 7 giorni, Daily 3, gli altri il giorno stesso); se è neutra il trade non conta. Il numero piccolo è quanti trade a favore.</div>`:`<div class="empty">Compare quando ci sono trade chiusi e, prima, note con il bias segnato.</div>`}</section>
+    <section class="blk"><div class="lab"><span>Sicurezza a fine sessione</span><span>win rate di quei giorni</span></div>
+      ${sc.length?`<div class="vbars">${sc.map(x=>`<div class="vb ${x.n&&x.wr>=55?"good":x.n&&x.wr<45?"bad":""}"><b>${x.n?x.wr.toFixed(0)+" %":"—"}</b><i style="height:${Math.max(6,x.n?x.wr:0)}%"></i><span>${x.k}/5<br>${x.giorni} gg · ${x.n} trade</span></div>`).join("")}</div><div class="note">Se le colonne alte sono a destra, la tua sensazione ha ragione: fidati di lei.</div>`:`<div class="empty">Chiudi la sessione con la sicurezza da 1 a 5: qui vedrai se la tua sensazione ha ragione.</div>`}</section>
    </div>
    <div class="grid g-stats">
-    <section class="blk"><div class="lab"><span>Le confluenze: cosa alza la statistica</span><span>barra = win rate con · tacca = senza</span></div>
-     ${ct.length?`<div class="hbars">${ct.map(hbar).join("")}</div><div class="note">Il numero a destra è la differenza di win rate. Verde: aiuta davvero. Rosso: toglie. In grigio le etichette con meno di 8 trade.</div>`:`<div class="empty">Compare quando ci sono trade chiusi con delle confluenze segnate.</div>`}</section>
+    <section class="blk"><div class="lab"><span>Le parole della tua strategia</span><span>nel "perché entro" · barra = la scrivi · tacca = no</span></div>
+     ${pw.length?`<div class="hbars">${pw.map(hbar).join("")}</div><div class="note">Parole cercate: ${PAROLE[stS].join(", ")}. Il numero piccolo è in quanti trade la scrivi.</div>`:`<div class="empty">Compare quando nei trade chiusi scrivi perché entri con le parole della tua strategia (${PAROLE[stS].join(", ")}).</div>`}</section>
     <div class="col">
-     <section class="blk"><div class="lab"><span>Come ero prima della sessione</span><span>win rate</span></div>
-      ${st.length?`<div class="vbars">${st.map(x=>`<div class="vb ${x.wr>=55?"good":x.wr<45?"bad":""}"><b>${x.wr.toFixed(0)} %</b><i style="height:${Math.max(6,x.wr)}%"></i><span>${esc(x.k)}<br>${x.n} trade</span></div>`).join("")}</div>`:`<div class="empty">Segna come stai prima di ogni trade: qui vedrai quanto pesa.</div>`}</section>
-     <section class="blk"><div class="lab"><span>La checklist, voce per voce</span><span>win rate con · senza</span></div>
-      <div class="hbars">${checkTable(T,stS).map(hbar).join("")}</div></section>
+     <section class="blk"><div class="lab"><span>Pazienza</span><span>minuti dalla prima nota all'entrata</span></div>${pz.nV+pz.nP?`<div class="kpis"><div class="kpi"><b>${min(pz.vinti)}</b><span>vinti · ${pz.nV}</span></div><div class="kpi"><b>${min(pz.persi)}</b><span>persi · ${pz.nP}</span></div></div><div class="note">${pz.vinti!=null&&pz.persi!=null&&pz.persi<pz.vinti?"Nei trade persi entri prima: la fretta ti costa.":"Valore centrale (mediana) dei minuti."}</div>`:`<div class="empty">Compare quando scrivi le note prima di entrare, con l'orario.</div>`}</section>
+     ${fi?`<section class="blk"><div class="lab"><span>Le tue finestre</span><span>8:00–10:30 · 16:30–19:00</span></div>${fi.with.n+fi.without.n?due(fi.with,"dentro",fi.without,"fuori"):`<div class="empty">Compare con i trade chiusi sull'oro.</div>`}</section>`:""}
+     <section class="blk"><div class="lab"><span>Costanza</span><span>ultimi 30 giorni</span></div><div class="kpis"><div class="kpi"><b>${co.giorni}</b><span>giorni scritti</span></div><div class="kpi"><b>${co.chiuse}</b><span>sessioni chiuse</span></div><div class="kpi"><b>${co.senzaTrade}</b><span>analizzati senza entrare</span></div></div></section>
     </div>
-   </div></div>`;
+   </div>
+   <section class="blk"><div class="lab"><span>Quando fai il tuo</span><span>da piano e andati a segno · i più recenti</span></div>
+    ${pr.length?`<div class="tgrid">${pr.map(t=>`<button type="button" class="tcard" data-open="${t.id}">${firstImg(t,"im").replace("</div>",`<span class="res w">${pct(t.res)}</span></div>`)}<div class="bd"><b>${fmtD(t.d)} · ${t.dir}</b><small style="white-space:normal">${esc(t.why||t.less||"")}</small></div></button>`).join("")}</div><div class="note">Rileggili quando dubiti: sono la prova che la tua lettura funziona.</div>`:`<div class="empty">Qui si raccolgono i trade fatti come da piano e andati a segno, con lo screenshot e le tue parole.</div>`}</section>
+   <div class="grid g-stats">
+    <section class="blk"><div class="lab"><span>Il risultato · % sul conto</span><span>${pct(s.sum)} in totale</span></div>${area(cv,140,true)}<div class="axis"><span>${L[0]?fmtD(L[0].d):""}</span><span>${L.length?fmtD(L[L.length-1].d):""}</span></div></section>
+    <div class="col">
+     <section class="blk"><div class="kpis"><div class="kpi"><b>${s.n?s.wr.toFixed(0)+" %":"—"}</b><span>win rate</span></div><div class="kpi"><b>${s.n?fR(s.avgR):"—"}</b><span>R medio</span></div><div class="kpi"><b>${!s.n?"—":s.pf===Infinity?"∞":s.pf.toFixed(2).replace(".",",")}</b><span>profit factor</span></div></div></section>
+     <section class="blk"><div class="lab"><span>Resoconto con Sara</span></div><div class="note" style="margin:0 0 10px">Scarica gli ultimi 30 giorni (note, trade, link alle immagini validi 7 giorni) e passa il file a Sara: lo legge con il coach di trading e ti dice che pattern vede nelle tue parole.</div><button type="button" class="cta ghost sm" data-exp>Scarica per Sara · ${STRAT[stS].n}</button></section>
+    </div>
+   </div>
+   ${conChecklist(T,stS)>=5?`<section class="blk"><div class="lab"><span>La checklist, voce per voce</span><span>win rate con · senza</span></div><div class="hbars">${checkTable(T,stS).map(hbar).join("")}</div></section>`:""}
+  </div>`;
 }
 
 /* ===== NUOVO TRADE / CHIUSURA / MODIFICA: a tutto schermo ===== */

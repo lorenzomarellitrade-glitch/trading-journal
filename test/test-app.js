@@ -161,10 +161,11 @@ try{
  ok("due posizioni: riga chiusa",cl2.esito_pct===4&&cl2.r===2&&cl2.aperto===false&&cl2.posizioni.esito1==="tp"&&cl2.posizioni.esito2==="tp"&&cl2.posizioni.esito2_pct===null,JSON.stringify(cl2));
  // ---- STATISTICHE
  await go("#statistiche");
- ok("statistiche: blocchi e grafici",$$(".blk").length===8&&$$("svg").length>=1,$$(".blk").length);
- if(N){ok("statistiche: time frame a favore del bias (daily)",/trade a favore del bias/.test($("#view").textContent)&&$$(".hbars")[0].textContent.includes("D"));ok("statistiche: sicurezza a fine sessione",/4\/5/.test($("#view").textContent))}
+ {const v=$("#view").textContent;ok("statistiche: i blocchi del processo",["Quando segui il piano","Tutti i time frame d'accordo","trade a favore del bias","Sicurezza a fine sessione","Le parole della tua strategia","Pazienza","Le tue finestre","Costanza","Quando fai il tuo","Il risultato","Resoconto con Sara"].every(k=>v.includes(k))&&(!N||$$("svg").length>=1),["Quando segui il piano","Tutti i time frame d'accordo","trade a favore del bias","Sicurezza a fine sessione","Le parole della tua strategia","Pazienza","Le tue finestre","Costanza","Quando fai il tuo","Il risultato","Resoconto con Sara"].filter(k=>!v.includes(k)).join()+" svg"+$$("svg").length);
+ ok("statistiche: niente confluenze né stato prima",!/Le confluenze|Come ero prima/.test(v));}
+ if(N){ok("statistiche: time frame a favore del bias (daily)",$$(".hbars")[0].textContent.includes("D"));ok("statistiche: sicurezza a fine sessione",/4\/5/.test($("#view").textContent));ok("statistiche: quando fai il tuo con i trade da piano vinti",$$(".tcard").length>=1)}
  await clk($("[data-exp]"));await W(100);ok("esporta: file per Sara con note e trade",/# Diario XAUUSD/.test(window.__ultimoExport||"")&&/Scritta il giorno dopo/.test(window.__ultimoExport)&&/TRADE short/.test(window.__ultimoExport)||/TRADE/.test(window.__ultimoExport),(window.__ultimoExport||"").slice(0,200));
- await clk($('[data-st="fx"]'));ok("statistiche: passa a forex",$('[data-st="fx"]').classList.contains("on")&&/swing/.test($("#view").textContent));
+ await clk($('[data-st="fx"]'));ok("statistiche: passa a forex, senza finestre",$('[data-st="fx"]').classList.contains("on")&&!/Le tue finestre/.test($("#view").textContent)&&/AOI/.test($("#view").textContent));
  // ---- IMPOSTAZIONI
  await clk($("#gearBtn"));ok("impostazioni: stato archivio e mail",/collegato/.test($("#syncSt").textContent)&&/test@test.it/.test($("#who").textContent));
  await clk($('#pop [data-pal="verde"]'));ok("impostazioni: verde toglie data-pal",!document.documentElement.hasAttribute("data-pal"));

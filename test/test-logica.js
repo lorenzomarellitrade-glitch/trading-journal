@@ -100,4 +100,22 @@ ok("lettura: weekly vale fino a 6 giorni dopo, non 7",(()=>{const N=[nn({tf:"W",
  const md=L.esportaMd(N,T,"xau","2026-11-01","2026-11-30",{"p/1.png":"https://x/1.png"});
  ok("esporta: giorno, nota, trade, fine e link immagine",/## 10\.11\.2026/.test(md)&&/08:00 · D · ↑ rialzo: riga 1 \/ riga 2/.test(md)&&/!\[\]\(https:\/\/x\/1\.png\)/.test(md)&&/TRADE long/.test(md)&&/perché: pattern/.test(md)&&/FINE SESSIONE · sicurezza 5\/5 · piano sì: bene/.test(md),md);
  ok("esporta: fuori periodo niente",!/10\.11/.test(L.esportaMd(N,T,"xau","2026-12-01","2026-12-31",{})));}
+
+// ---- statistiche del diario
+{const T=[t({id:"a",piano:true,res:1,r:2}),t({id:"b",piano:true,res:-1,r:-1}),t({id:"c",piano:false,res:-1,r:-1}),t({id:"d",open:true,res:null})];
+ const p=L.pianoTable(T,"xau");ok("piano: con 2 (50 %), senza 1 (0 %), aperti fuori",p.with.n===2&&p.with.wr===50&&p.without.n===1&&p.without.wr===0);
+ ok("prove: solo da piano e vinti",L.prove(T,"xau").map(x=>x.id).join()==="a");}
+{const N=[nn({tf:"W",bias:"up",ora:"07:00"}),nn({tf:"D",bias:"up",ora:"07:10"}),nn({tf:"H4",bias:"nt",ora:"07:20"})];
+ const T=[t({d:"2026-11-10",ora:"09:00",dir:"long",res:1}),t({d:"2026-11-10",ora:"09:30",dir:"short",res:-1}),t({d:"2026-11-10",ora:"06:00",dir:"long",res:1})];
+ const a=L.accordo(N,T,"xau");ok("accordo: long con W e D rialzo = d'accordo, short = misti, trade prima delle note escluso",a.with.n===1&&a.with.wr===100&&a.without.n===1&&a.without.wr===0,a);}
+{const N=[nn({ora:"08:00"}),nn({ora:"08:30"}),nn({ora:"16:00",tipo:"fine"})];const T=[t({d:"2026-11-10",ora:"08:40",res:1}),t({d:"2026-11-10",ora:"08:10",res:-1}),t({d:"2026-11-10",ora:"",res:1})];
+ const p=L.pazienza(N,T,"xau");ok("pazienza: minuti dalla prima nota (40 vinti, 10 persi)",p.vinti===40&&p.persi===10&&p.nV===1&&p.nP===1,p);}
+ok("mediana pari e dispari",L.mediana([3,1,2])===2&&L.mediana([1,2,3,4])===2.5&&L.mediana([])===null);
+ok("finestre: 8:00 e 18:59 dentro, 10:30 e 19:00 fuori",L.inFinestra("08:00")&&L.inFinestra("18:59")&&!L.inFinestra("10:30")&&!L.inFinestra("19:00")&&!L.inFinestra("13:00"));
+ok("finestre: solo oro e con orario",L.finestre([t({ora:"09:00",res:1}),t({ora:"13:00",res:-1}),t({ora:"09:00",s:"fx",res:1})]).with.n===1);
+{const N=[nn({d:"2026-11-09"}),nn({d:"2026-11-10"}),nn({d:"2026-11-10",tipo:"fine"}),nn({d:"2026-10-01"})];const T=[t({d:"2026-11-10"})];
+ const c=L.costanza(N,T,"xau","2026-11-01","2026-11-30");ok("costanza: 2 giorni scritti, 1 chiusa, 1 senza trade",c.giorni===2&&c.chiuse===1&&c.senzaTrade===1,c);}
+{const T=[t({why:"Presa la Liquidità sotto Asia, rottura al 5'",res:1}),t({why:"rottura anticipata",res:-1}),t({why:"",res:1})];
+ const w=L.parole(T,"xau");const g=k=>w.find(x=>x.k===k);ok("parole: maiuscole ignorate, win rate per parola",g("liquidità").with.n===1&&g("liquidità").with.wr===100&&g("rottura").with.n===2&&g("rottura").with.wr===50&&!g("PRZ"),w.map(x=>x.k));}
+ok("checklist: conta solo i trade con almeno una spunta",L.conChecklist([t({check:[0,0,0,0,0]}),t({check:[1,0,0,0,0]})],"xau")===1);
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

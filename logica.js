@@ -86,6 +86,26 @@ function esportaMd(N,T,s,da,a,url){const u=p=>url&&url[p]?url[p]:p;const D=[...n
   else o+="\n- "+(x.ora||"--:--")+" · TRADE "+x.dir+" · rischio "+(x.risk==null?"-":x.risk+" %")+(x.rr?" · RR "+fmtRR(x.rr):"")+(x.pos?" · 2 posizioni":"")+" · "+(x.open?"aperto":"esito "+pct(x.res)+(x.r==null?"":" · "+x.r+" R")+" · piano "+(x.piano===false?"no":"sì"))+(x.why?"\n  perché: "+x.why.replace(/\n/g," / "):"")+(x.less?"\n  lezione: "+x.less.replace(/\n/g," / "):"")+(x.tv?"\n  ![]("+tvImg(x.tv)+")":"")+im})
   o+="\n"});return o}
 
-const L={TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+/* Statistiche del diario (Lore, 2026-11-11): sul processo, non sul risultato */
+const pianoTable=(T,s)=>splitBy(closedOf(T,s),t=>t.piano!==false);
+/* tutti i time frame con un bias (rialzo/ribasso) d'accordo con il trade, contro letture miste; servono almeno 2 letture */
+function accordo(N,T,s){const L=[];closedOf(T,s).forEach(t=>{const b=lettura(N,s,t.d,t.ora).map(x=>x.n).filter(n=>n&&(n.bias==="up"||n.bias==="dn"));if(b.length<2)return;L.push({...t,_ok:b.every(n=>(n.bias==="up")===(t.dir==="long"))})});return splitBy(L,t=>t._ok)}
+const minuti=o=>{const[h,m]=String(o).split(":").map(Number);return h*60+m};
+const mediana=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y),k=b.length>>1;return b.length%2?b[k]:(b[k-1]+b[k])/2};
+/* pazienza: minuti tra la prima nota del giorno e l'entrata */
+function pazienza(N,T,s){const v=[],p=[];closedOf(T,s).forEach(t=>{if(!t.ora)return;const f=N.filter(n=>n.s===s&&n.d===t.d&&n.tipo!=="fine"&&n.ora&&n.ora<=t.ora).map(n=>minuti(n.ora));if(!f.length)return;const m=minuti(t.ora)-Math.min(...f);(t.res>0?v:p).push(m)});return{vinti:mediana(v),persi:mediana(p),nV:v.length,nP:p.length}}
+/* finestre di Lore sull'oro: 8:00-10:30 e 16:30-19:00 */
+const inFinestra=o=>{const h=minuti(o)/60;return(h>=8&&h<10.5)||(h>=16.5&&h<19)};
+const finestre=T=>splitBy(closedOf(T,"xau").filter(t=>t.ora),t=>inFinestra(t.ora));
+/* costanza del diario in un periodo */
+function costanza(N,T,s,da,a){const dn=new Set(N.filter(n=>n.s===s&&n.d>=da&&n.d<=a).map(n=>n.d)),dt=new Set(T.filter(t=>t.s===s&&t.d>=da&&t.d<=a).map(t=>t.d));return{giorni:dn.size,chiuse:new Set(N.filter(n=>n.s===s&&n.tipo==="fine"&&n.d>=da&&n.d<=a).map(n=>n.d)).size,senzaTrade:[...dn].filter(d=>!dt.has(d)).length}}
+/* le parole della strategia di Lore nel "perché entro" */
+const PAROLE={xau:["liquidità","PRZ","evidence","fallimento","rottura","Asia","rifiuto"],fx:["AOI","psicologico","evidence","engulfing","rifiuto","lower high","higher low"]};
+function parole(T,s){const L=closedOf(T,s);return PAROLE[s].map(w=>({k:w,...splitBy(L,t=>(t.why||"").toLowerCase().includes(w.toLowerCase()))})).filter(x=>x.with.n>0).sort((a,b)=>b.with.wr-a.with.wr)}
+/* quando fai il tuo: trade da piano andati a segno, i più recenti */
+const prove=(T,s,n)=>closedOf(T,s).filter(t=>t.piano!==false&&t.res>0).slice(-(n||6)).reverse();
+const conChecklist=(T,s)=>closedOf(T,s).filter(t=>(t.check||[]).some(Boolean)).length;
+
+const L={pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);
