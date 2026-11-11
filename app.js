@@ -1,6 +1,6 @@
 // Journal di Lore: interfaccia + archivio su Supabase. La logica pura sta in logica.js (JL).
 (function(){
-const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
+const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const today=new Date(); const TK=dk(today);
 const num=v=>v!=null&&v!==""&&isFinite(v);
@@ -58,7 +58,7 @@ function compositore(){
   const tfs=TFS[sesS],oggi=sesD===TK;
   const keep=C.edit?((N.find(n=>n.id===C.edit)||{}).imgs||[]).filter(p=>!C.drop.includes(p)):[];
   const th=[...keep.map(p=>`<span class="cth"><img alt="" data-path="${esc(p)}"><button type="button" data-crmk="${esc(p)}" aria-label="Togli">×</button></span>`),...C.pending.map((b,i)=>`<span class="cth"><img alt="" src="${b.url}"><button type="button" data-crmp="${i}" aria-label="Togli">×</button></span>`)].join("");
-  const ora=`<input type="time" class="cora" data-cora value="${esc(C.ora)}" title="${oggi?"vuoto = adesso":"orario"}">`;
+  const ora=`<label class="cin">${C.mode==="trade"?"entrata":"ora"}<input type="text" inputmode="numeric" autocomplete="off" class="cora" data-cora value="${esc(C.ora)}" placeholder="${oggi?"adesso":"es. 9:15"}"></label>`;
   let riga,ph,bott;
   if(C.mode==="trade"){riga=`<span class="clab">trade</span><button type="button" class="chip ${C.dir==="long"?"on up":""}" data-cdir="long">▲ long</button><button type="button" class="chip ${C.dir==="short"?"on dn":""}" data-cdir="short">▼ short</button><span class="sep"></span><label class="cin">rischio %<input type="number" step="0.1" data-crisk value="${C.risk==null?"":C.risk}"></label><label class="cin">RR<input type="text" inputmode="decimal" data-crr placeholder="1:2" value="${esc(C.rrTxt)}"></label><button type="button" class="chip ${C.pos?"on":""}" data-cpos>2 posizioni</button><span class="sep"></span>${ora}`;ph="Perché entro: cosa vedo, con parole mie. Lo screenshot con ⌘V.";bott=`<button type="button" class="btn gh" data-cmode="nota">← nota</button><button type="button" class="btn pri" id="cInvia">Salva il trade · aperto</button>`}
   else if(C.mode==="fine"){riga=`<span class="clab">fine sessione</span><span class="clab">sicurezza</span>${[1,2,3,4,5].map(k=>`<button type="button" class="chip ${C.sic===k?"on":""}" data-csic="${k}">${k}</button>`).join("")}<span class="sep"></span><span class="clab">piano rispettato</span><button type="button" class="chip ${C.piano===true?"on":""}" data-cpl="1">sì</button><button type="button" class="chip ${C.piano===false?"on":""}" data-cpl="0">no</button><span class="sep"></span>${ora}`;ph="Cosa mi porto via da oggi.";bott=`<button type="button" class="btn gh" data-cmode="nota">← nota</button><button type="button" class="btn pri" id="cInvia">${C.edit?"Salva":"Chiudi la sessione"}</button>`}
@@ -88,7 +88,9 @@ async function caricaImg(id,list){const paths=[];for(let i=0;i<list.length;i++){
 async function inviaC(){
   if(C.busy)return;const c=C;const txt=c.txt.trim();const fine=c.mode==="fine",trade=c.mode==="trade";
   if(!c.salvato&&c.mode==="nota"&&!txt&&!c.pending.length&&!c.edit){toast("Scrivi cosa vedi o incolla uno screenshot.");return}
-  const ora=c.ora||(sesD===TK?adesso():"");let rr=null;
+  const oraM=parseOra(c.ora);if(Number.isNaN(oraM)){toast("Orario non valido: scrivilo tipo 9:15.");return}
+  if(trade&&!c.salvato&&!oraM&&sesD!==TK){toast("Giorno passato: scrivi l'orario di entrata, tipo 9:15.");return}
+  const ora=oraM||(sesD===TK?adesso():"");let rr=null;
   if(trade&&!c.salvato){rr=parseRR(c.rrTxt);if(Number.isNaN(rr)){toast("RR non valido: scrivilo tipo 1:2.");return}if(!num(c.risk)||c.risk<=0){toast("Manca il rischio.");return}}
   const salva=trade?saveT:saveN,lista=()=>trade?T:N;
   c.busy=true;redraw();
@@ -96,7 +98,7 @@ async function inviaC(){
     if(!c.salvato){
       let riga;
       if(trade){const [h,m]=(ora||"12:00").split(":").map(Number);riga={id:"n"+Date.now(),s:sesS,dir:c.dir,d:sesD,ora,ses:ora?sessFor(h+m/60):"",risk:+c.risk,check:STRAT[sesS].check.map(()=>0),conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr,pos:c.pos?nuovaPos(+c.risk):null,less:"",tv:"",imgs:[],open:true,why:txt};if(riga.pos){delete riga.pos.rr1Txt;delete riga.pos.r1Man}}
-      else{const base=c.edit?N.find(n=>n.id===c.edit):null;riga={id:base?base.id:"n"+Date.now(),s:base?base.s:sesS,d:base?base.d:sesD,ora:base?c.ora:ora,tipo:fine?"fine":"nota",tf:fine?null:c.tf,bias:fine?null:c.bias,txt,imgs:(base?base.imgs:[]).filter(p=>!c.drop.includes(p)),sic:fine?c.sic:null,piano:fine?c.piano:null}}
+      else{const base=c.edit?N.find(n=>n.id===c.edit):null;riga={id:base?base.id:"n"+Date.now(),s:base?base.s:sesS,d:base?base.d:sesD,ora:base?oraM:ora,tipo:fine?"fine":"nota",tf:fine?null:c.tf,bias:fine?null:c.bias,txt,imgs:(base?base.imgs:[]).filter(p=>!c.drop.includes(p)),sic:fine?c.sic:null,piano:fine?c.piano:null}}
       const sv=await salva(riga);if(!sv)return;
       c.salvato=sv.id;
       if(c.drop.length){const {error}=await sb.storage.from(BUCKET).remove(c.drop);if(!error)c.drop=[]}
@@ -192,7 +194,8 @@ let F=null, saving=false;
 function openNew(dateKey,id,mode){
   const t=id?T.find(x=>x.id===id):null;
   const nowH=today.getHours()+today.getMinutes()/60;
-  F=t?JSON.parse(JSON.stringify(t)):{s:sesS,dir:"long",d:dateKey||TK,ora:pad(today.getHours())+":"+pad(today.getMinutes()),ses:sessFor(nowH),risk:STRAT[sesS].risk,check:STRAT[sesS].check.map(()=>0),why:"",conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr:null,pos:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
+  const dd=dateKey||TK,oggi=dd===TK;
+  F=t?JSON.parse(JSON.stringify(t)):{s:sesS,dir:"long",d:dd,ora:oggi?adesso():"",ses:oggi?sessFor(nowH):"",risk:STRAT[sesS].risk,check:STRAT[sesS].check.map(()=>0),why:"",conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr:null,pos:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
   if(!t&&sesS==="fx")F.pos=nuovaPos(F.risk);F.mode=t?(mode||(t.open?"close":"edit")):"new";F.rrTxt=fmtRR(F.rr);if(F.pos){F.pos.rr1Txt=fmtRR(F.pos.rr1);F.pos.r1Man=true}F.out=F.mode==="close"?null:tipoEsito(F.res,F.risk,F.rr);F.pending=[];F.drop=[];F.confirmDel=false;
   renderSheet();$("sheet").scrollTop=0;
 }
@@ -213,7 +216,7 @@ function renderSheet(){
    </div>${done<n&&M==="new"?`<div class="msg warn" style="margin-top:14px"><b>Checklist non completa.</b> Puoi salvare lo stesso, ma nelle statistiche conterà come trade fuori checklist.</div>`:""}</div>`;
   const setup=`<section class="card"><h4><i>1</i>Cosa</h4>
      <div class="row2" style="margin-bottom:12px"><label class="fl">strategia<div class="big2"><button type="button" data-fs="xau" class="${F.s==="xau"?"on":""}">XAUUSD</button><button type="button" data-fs="fx" class="${F.s==="fx"?"on":""}">FOREX</button></div></label><label class="fl">direzione<div class="big2"><button type="button" data-fd="long" class="long ${F.dir==="long"?"on":""}">▲ long</button><button type="button" data-fd="short" class="short ${F.dir==="short"?"on":""}">▼ short</button></div></label></div>
-     <div class="row3"><label class="fl">data<input type="date" value="${F.d}" data-ff="d"></label><label class="fl">orario di entrata<input type="time" value="${esc(F.ora||"")}" data-ff="ora"></label><label class="fl">rischio sul conto, %<input type="number" step="0.1" value="${F.risk==null?"":F.risk}" data-ff="risk"></label></div>
+     <div class="row3"><label class="fl">data<input type="date" value="${F.d}" data-ff="d"></label><label class="fl">orario di entrata<input type="text" inputmode="numeric" autocomplete="off" placeholder="es. 9:15" value="${esc(F.ora||"")}" data-ff="ora" class="${Number.isNaN(parseOra(F.ora))?"bad":""}"></label><label class="fl">rischio sul conto, %<input type="number" step="0.1" value="${F.risk==null?"":F.risk}" data-ff="risk"></label></div>
      <label class="fl" style="margin-top:12px">posizioni<div class="big2"><button type="button" data-fpos="1" class="${F.pos?"":"on"}">posizione unica</button><button type="button" data-fpos="2" class="${F.pos?"on":""}">due posizioni · TP1 + TP</button></div></label>
      ${F.pos?`<div class="row3" style="margin-top:12px"><label class="fl">pos. 1 · rischio %<input type="number" step="0.1" value="${F.pos.r1==null?"":F.pos.r1}" data-ff="p1r" class="${p1ok?"":"bad"}"></label><label class="fl">pos. 1 · RR<input type="text" inputmode="decimal" autocomplete="off" value="${esc(F.pos.rr1Txt||"")}" data-ff="p1rr" placeholder="1:1" class="${Number.isNaN(F.pos.rr1)?"bad":""}"></label><label class="fl">TP1, %<input type="text" readonly tabindex="-1" class="calc ok" value="${lv2.tp1==null?"—":pct(lv2.tp1)}" data-calc="tp1"></label></div>
      <div class="row3" style="margin-top:12px"><label class="fl">pos. 2 · rischio %<input type="text" readonly tabindex="-1" class="calc" value="${lv2.r2==null?"—":String(lv2.r2).replace(".",",")}" data-calc="r2"></label><label class="fl">pos. 2 · RR<input type="text" inputmode="decimal" autocomplete="off" value="${esc(F.rrTxt||"")}" data-ff="rrTxt" placeholder="1:3" class="${Number.isNaN(F.rr)?"bad":""}"></label><label class="fl">TP, %<input type="text" readonly tabindex="-1" class="calc ok" value="${lv2.tp2==null?"—":pct(lv2.tp2)}" data-calc="tp2"></label></div>
@@ -242,6 +245,7 @@ function closeSheet(){F&&F.pending.forEach(b=>URL.revokeObjectURL(b.url));$("she
 function addPending(file){if(!F||!/^image\//.test(file.type))return;F.pending.push({blob:file,url:URL.createObjectURL(file)});renderSheet()}
 async function commitSheet(){
   if(saving)return;const M=F.mode;
+  {const o=parseOra(F.ora);if(Number.isNaN(o)){toast("Orario non valido: scrivilo tipo 9:15.");return}F.ora=o}
   if(Number.isNaN(F.rr)||(F.pos&&Number.isNaN(F.pos.rr1))){toast("RR non valido: scrivilo tipo 1:2.");return}
   if(F.pos&&!(num(F.pos.r1)&&num(F.risk)&&F.pos.r1>0&&F.pos.r1<F.risk)){toast("Il rischio della posizione 1 deve stare tra 0 e il totale.");return}
   if((M==="close"||(M==="edit"&&!F.open))&&(F.res==null||isNaN(F.res))){toast("Manca l'esito: TP, SL, pareggio o altro.");return}
@@ -273,7 +277,7 @@ document.addEventListener("click",async e=>{
   if(!q("#pop")&&!$("pop").hidden)$("pop").hidden=true;
   const pl=q("#pop [data-pal]");if(pl){setPal(pl.dataset.pal);return}
   if(q("#logoutBtn")){await sb.auth.signOut();return}
-  if(q("#newBtn")){openNew(TK);return}
+  if(q("#newBtn")){openNew(inSess()?sesD:TK);return}
   const nd=q("[data-newday]");if(nd){openNew(nd.dataset.newday);return}
   const cl=q("[data-close]");if(cl){openNew(null,cl.dataset.close,"close");return}
   const tr=q("[data-open]");if(tr){openNew(null,tr.dataset.open);return}
@@ -328,7 +332,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("change",e=>{if(e.target.id==="fileIn"&&F){[...e.target.files].forEach(addPending)}if(e.target.id==="sesDate"&&e.target.value){sesD=e.target.value;resetC();redraw()}});
 document.addEventListener("input",e=>{const g=e.target;if(g.id==="cTxt"){C.txt=g.value;return}if(g.hasAttribute("data-cora")){C.ora=g.value;return}if(g.hasAttribute("data-crisk")){C.risk=g.value===""?null:+g.value;return}if(g.hasAttribute("data-crr")){C.rrTxt=g.value;return}
   if(!F)return;const f=e.target.dataset.ff;if(!f)return;const v=e.target.value;if(f==="res"||f==="r"||f==="risk")F[f]=v===""?null:+v;else F[f]=v;if(f==="rrTxt")F.rr=parseRR(v);if(f==="res"&&!F.pos)F.r=rDaEsito(F.res,F.risk);if(F.pos){if(f==="p1r"){F.pos.r1=v===""?null:+v;F.pos.r1Man=true}if(f==="p1rr"){F.pos.rr1Txt=v;F.pos.rr1=parseRR(v)}if(f==="p2res")F.pos.res2=v===""?null:+v;if(f==="risk"&&!F.pos.r1Man)F.pos.r1=meta(F.risk);ricalcola()}
-  else if((f==="risk"||f==="rrTxt")&&F.out&&F.out!=="altro"){const x=esitoDa(F.out,F.risk,num(F.rr)?F.rr:null);if(x){F.res=x.res;F.r=x.r}else{F.res=null;F.r=null}}if(f==="risk"&&!F.pos&&F.out==="altro")F.r=rDaEsito(F.res,F.risk);if(f==="ora"&&v){const [h,m]=v.split(":").map(Number);F.ses=sessFor(h+m/60)}if(f==="less"||f==="why")return;const sel=document.activeElement,id=sel&&sel.dataset.ff;renderSheet();if(id){const el=document.querySelector(`[data-ff="${id}"]`);if(el){el.focus();if(el.type==="text"||el.type==="number")try{el.setSelectionRange(el.value.length,el.value.length)}catch(x){}}}});
+  else if((f==="risk"||f==="rrTxt")&&F.out&&F.out!=="altro"){const x=esitoDa(F.out,F.risk,num(F.rr)?F.rr:null);if(x){F.res=x.res;F.r=x.r}else{F.res=null;F.r=null}}if(f==="risk"&&!F.pos&&F.out==="altro")F.r=rDaEsito(F.res,F.risk);if(f==="ora"){const o=parseOra(v);if(o){const [h,m]=o.split(":").map(Number);F.ses=sessFor(h+m/60)}}if(f==="less"||f==="why")return;const sel=document.activeElement,id=sel&&sel.dataset.ff;renderSheet();if(id){const el=document.querySelector(`[data-ff="${id}"]`);if(el){el.focus();if(el.type==="text"||el.type==="number")try{el.setSelectionRange(el.value.length,el.value.length)}catch(x){}}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheet();$("pop").hidden=true}if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)&&e.target.id==="cTxt"){e.preventDefault();inviaC()}});
 document.addEventListener("paste",e=>{if(!F&&inSess()){const it=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file"&&/^image\//.test(i.type));if(it.length){e.preventDefault();it.forEach(i=>addC(i.getAsFile()))}return}
   if(!F||F.mode==="close")return;const items=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file"&&/^image\//.test(i.type));if(items.length){e.preventDefault();items.forEach(i=>addPending(i.getAsFile()));toast("Screenshot aggiunto.")}});

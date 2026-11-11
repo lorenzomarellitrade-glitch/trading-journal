@@ -65,6 +65,8 @@ const BIAS={up:"↑ rialzo",dn:"↓ ribasso",nt:"↔ neutro"};
 function rowToN(r){return{id:r.id,s:r.strategia,d:r.data,ora:r.ora||"",tf:r.tf||null,bias:r.bias||null,txt:r.testo||"",imgs:r.immagini||[],tipo:r.tipo||"nota",sic:r.sicurezza==null?null:+r.sicurezza,piano:r.piano==null?null:!!r.piano}}
 function nToRow(n){const o={strategia:n.s,data:n.d,ora:n.ora||null,tf:n.tf||null,bias:n.bias||null,testo:n.txt||"",immagini:n.imgs||[],tipo:n.tipo||"nota",sicurezza:n.sic==null?null:+n.sic,piano:n.piano==null?null:!!n.piano};if(n.id&&!String(n.id).startsWith("n"))o.id=n.id;return o}
 const kOra=x=>x.ora||"99:99";
+/* orario scritto a mano: "9" "915" "9:15" "9.15" "09,15" → "09:15"; vuoto → ""; sbagliato → NaN */
+function parseOra(v){const t=String(v==null?"":v).trim();if(!t)return"";let h,m;const a=/^(\d{1,2})(?:[:.,h ](\d{1,2}))?$/.exec(t),b=/^(\d{1,2})(\d{2})$/.exec(t);if(a){h=+a[1];m=a[2]==null?0:+a[2]}else if(b){h=+b[1];m=+b[2]}else return NaN;return h<24&&m<60?pad(h)+":"+pad(m):NaN}
 /* il flusso di un giorno: note e trade in ordine di orario; senza orario in fondo; la chiusura della sessione sempre ultima */
 function flusso(N,T,s,d){const a=N.filter(n=>n.s===s&&n.d===d).map(x=>({k:x.tipo==="fine"?"fine":"nota",x})),b=T.filter(t=>t.s===s&&t.d===d).map(x=>({k:"trade",x}));return[...a,...b].map((e,i)=>({...e,i})).sort((p,q)=>(p.k==="fine")-(q.k==="fine")||(kOra(p.x)<kOra(q.x)?-1:kOra(p.x)>kOra(q.x)?1:p.i-q.i)).map(({i,...e})=>e)}
 const giorni=(a,b)=>{const u=k=>{const[y,m,g]=String(k).split("-").map(Number);return Date.UTC(y,m-1,g)/864e5};return u(b)-u(a)};
@@ -111,6 +113,6 @@ function parole(N,T,s){const L=closedOf(T,s).map(t=>({...t,_txt:testoTrade(N,t)}
 const prove=(T,s,n)=>closedOf(T,s).filter(t=>t.piano!==false&&t.res>0).slice(-(n||6)).reverse();
 const conChecklist=(T,s)=>closedOf(T,s).filter(t=>(t.check||[]).some(Boolean)).length;
 
-const L={pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+const L={parseOra,pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);

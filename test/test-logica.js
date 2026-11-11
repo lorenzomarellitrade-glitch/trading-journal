@@ -123,4 +123,6 @@ ok("finestre: solo oro e con orario",L.finestre([t({ora:"09:00",res:1}),t({ora:"
  ok("parole: contano anche le note del giorno scritte prima dell'entrata",g("testa e spalle").with.n===2&&!g("zona estrema"));
  ok("parole: niente liquidità",!L.PAROLE.xau.some(p=>/liquidit/.test(p[0])));}
 ok("checklist: conta solo i trade con almeno una spunta",L.conChecklist([t({check:[0,0,0,0,0]}),t({check:[1,0,0,0,0]})],"xau")===1);
+ok("orario a mano: 9, 915, 9:15, 9.15, 21h30",L.parseOra("9")==="09:00"&&L.parseOra("915")==="09:15"&&L.parseOra("9:15")==="09:15"&&L.parseOra("9.15")==="09:15"&&L.parseOra("21h30")==="21:30"&&L.parseOra("16:5")==="16:05");
+ok("orario a mano: vuoto e sbagliati",L.parseOra("")===""&&Number.isNaN(L.parseOra("25"))&&Number.isNaN(L.parseOra("9:70"))&&Number.isNaN(L.parseOra("ciao")));
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

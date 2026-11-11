@@ -159,6 +159,16 @@ try{
  await clk($("#saveSheet"));await W(200);
  const cl2=window.__W.filter(w=>w[0]==="update").slice(-1)[0][1];
  ok("due posizioni: riga chiusa",cl2.esito_pct===4&&cl2.r===2&&cl2.aperto===false&&cl2.posizioni.esito1==="tp"&&cl2.posizioni.esito2==="tp"&&cl2.posizioni.esito2_pct===null,JSON.stringify(cl2));
+ // ---- GIORNO PASSATO: orario a mano
+ await go("#sessione");await clk($('[data-sm="xau"]'));await clk($('[data-dg="-1"]'));{const ieri=$("#sesDate").value;
+ await clk($("#newBtn"));ok("giorno prima: + Nuovo trade apre quel giorno, senza orario",$('[data-ff="d"]').value===ieri&&$('[data-ff="ora"]').value==="");
+ await typ('[data-ff="ora"]',"9");ok("scheda: orario 9 = sessione Londra",$('[data-fse="Londra"]').classList.contains("on"));await clk($("#cancelSheet"));
+ await clk($('[data-cmode="trade"]'));await typ("[data-crr]","1:2");await clk($("#cInvia"));ok("giorno prima: trade senza orario chiede l'orario",/scrivi l'orario di entrata/.test($("#toast").textContent));
+ await typ("[data-cora]","25");await clk($("#cInvia"));ok("orario sbagliato non salva",/Orario non valido/.test($("#toast").textContent));
+ await typ("[data-cora]","9");await typ("#cTxt","Trade di ieri");await clk($("#cInvia"));await W(250);
+ {const r=window.__W.filter(x=>x[0]==="insert").slice(-1)[0][1];ok("giorno prima: trade con data di ieri, 09:00, Londra",r.data===ieri&&r.ora==="09:00"&&r.sessione==="Londra"&&r.motivo==="Trade di ieri",JSON.stringify(r));
+}
+ await clk($('[data-dg="0"]'));}
  // ---- STATISTICHE
  await go("#statistiche");
  {const v=$("#view").textContent;ok("statistiche: i blocchi del processo",["Quando segui il piano","Tutti i time frame d'accordo","trade a favore del bias","Sicurezza a fine sessione","Le parole della tua strategia","Pazienza","Le tue finestre","Costanza","Quando fai il tuo","Il risultato","Resoconto con Sara"].every(k=>v.includes(k))&&(!N||$$("svg").length>=1),["Quando segui il piano","Tutti i time frame d'accordo","trade a favore del bias","Sicurezza a fine sessione","Le parole della tua strategia","Pazienza","Le tue finestre","Costanza","Quando fai il tuo","Il risultato","Resoconto con Sara"].filter(k=>!v.includes(k)).join()+" svg"+$$("svg").length);
