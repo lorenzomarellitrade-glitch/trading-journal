@@ -66,4 +66,38 @@ ok("esito2: manca una posizione = null",L.esito2(2,P({o1:"tp"}),3)===null&&L.esi
 ok("esito2: TP senza RR = null",L.esito2(2,P({o1:"tp",o2:"tp"}),null)===null);
 ok("posizioni: riga <-> trade",(()=>{const r=L.tToRow(t({risk:2,rr:3,pos:P({o1:"tp",o2:"altro",res2:1.5})}));const b=L.rowToT({...row,posizioni:r.posizioni});return r.posizioni.rischio1===1&&r.posizioni.esito2==="altro"&&r.posizioni.esito2_pct===1.5&&b.pos.r1===1&&b.pos.rr1===1&&b.pos.o1==="tp"&&b.pos.res2===1.5})());
 ok("posizioni: posizione unica = null",L.tToRow(t({})).posizioni===null&&L.rowToT(row).pos===null);
+
+// ---- diario di sessione (2026-11-11)
+const nn=(o)=>({id:"z",s:"xau",d:"2026-11-10",ora:"08:00",tf:"D",bias:null,txt:"",imgs:[],tipo:"nota",sic:null,piano:null,...o});
+ok("time frame: oro W-M5, forex W-H1",L.TFS.xau.join()==="W,D,H4,H1,M15,M5"&&L.TFS.fx.join()==="W,D,H4,H1");
+ok("nota: riga <-> nota",(()=>{const r=L.nToRow(nn({id:"n1",tf:"H4",bias:"up",txt:"ciao",imgs:["a"]}));const b=L.rowToN({...r,id:"v1"});return !("id" in r)&&r.tf==="H4"&&r.bias==="up"&&r.testo==="ciao"&&r.tipo==="nota"&&b.txt==="ciao"&&b.imgs[0]==="a"&&b.id==="v1"})());
+ok("nota: fine sessione con sicurezza e piano",(()=>{const r=L.nToRow(nn({tipo:"fine",sic:4,piano:false,tf:null}));return r.tipo==="fine"&&r.sicurezza===4&&r.piano===false&&r.tf===null})());
+ok("trade: motivo scritto e letto",L.tToRow(t({why:"perché sì"})).motivo==="perché sì"&&L.rowToT({...L.tToRow(t({why:"x"})),id:"q"}).why==="x");
+{const N=[nn({id:"a",ora:"09:00"}),nn({id:"b",ora:"08:10"}),nn({id:"c",ora:"",tf:"H1"}),nn({id:"f",tipo:"fine",ora:"07:00"}),nn({id:"x",s:"fx"}),nn({id:"y",d:"2026-11-09"})];const T=[t({id:"t1",d:"2026-11-10",ora:"08:30"}),t({id:"t2",d:"2026-11-10",s:"fx"})];
+ const F=L.flusso(N,T,"xau","2026-11-10");
+ ok("flusso: ordine per orario, senza orario in fondo, fine sessione ultima",F.map(e=>e.x.id).join()==="b,t1,a,c,f",F.map(e=>e.x.id).join());
+ ok("flusso: solo il mercato e il giorno scelti",F.length===5&&F.filter(e=>e.k==="trade").length===1);}
+ok("giorni tra due date",L.giorni("2026-10-30","2026-11-02")===3&&L.giorni("2026-11-02","2026-11-02")===0);
+{const N=[nn({id:"w",tf:"W",d:"2026-11-04",bias:"up"}),nn({id:"d1",tf:"D",d:"2026-11-05"}),nn({id:"h",tf:"H4",d:"2026-11-09"}),nn({id:"h2",tf:"H4",d:"2026-11-10",ora:"09:30"}),nn({id:"m",tf:"M5",d:"2026-11-10",ora:"08:40"})];
+ const l=L.lettura(N,"xau","2026-11-10");const g=tf=>l.find(x=>x.tf===tf).n;
+ ok("lettura: weekly valido 7 giorni, daily 3",g("W").id==="w"&&g("D")===null);
+ ok("lettura: H4 solo del giorno, l'ultimo",g("H4").id==="h2"&&g("M5").id==="m"&&g("H1")===null);
+ ok("lettura: fino a un orario esclude le note dopo",L.lettura(N,"xau","2026-11-10","09:00").find(x=>x.tf==="H4").n===null);
+ ok("lettura forex: 4 time frame",L.lettura(N,"fx","2026-11-10").length===4);}
+{const N=[nn({tf:"D",d:"2026-11-10",ora:"08:00",bias:"up"}),nn({tf:"D",d:"2026-11-11",ora:"08:00",bias:"dn"}),nn({tf:"H4",d:"2026-11-11",ora:"08:00",bias:"nt"})];
+ const T=[t({d:"2026-11-10",ora:"09:00",dir:"long",res:1}),t({d:"2026-11-11",ora:"09:00",dir:"long",res:-0.5}),t({d:"2026-11-11",ora:"07:00",dir:"short",res:1})];
+ const a=L.allineamento(N,T,"xau");const d=a.find(x=>x.k==="D");
+ ok("allineamento: daily a favore 1 (vinto), contro 2; alle 7 vale ancora il daily di ieri",d.with.n===1&&d.with.wr===100&&d.without.n===2&&d.without.wr===50,d);
+ ok("allineamento: bias neutro non conta",!a.find(x=>x.k==="H4"));}
+{const N=[nn({tf:"H1",d:"2026-11-10",ora:"08:00",bias:"up"}),nn({tf:"H1",d:"2026-11-10",ora:"10:00",bias:"nt"}),nn({tf:"H4",d:"2026-11-10",ora:"",bias:"dn"})];const T=[t({d:"2026-11-10",ora:"11:00",dir:"long",res:1})];
+ const a=L.allineamento(N,T,"xau");
+ ok("allineamento: un neutro scritto dopo annulla il rialzo",!a.find(x=>x.k==="H1"));
+ ok("allineamento: nota senza orario nello stesso giorno non conta",!a.find(x=>x.k==="H4"));}
+ok("lettura: weekly vale fino a 6 giorni dopo, non 7",(()=>{const N=[nn({tf:"W",d:"2026-11-03"})];return L.lettura(N,"xau","2026-11-09")[0].n&&!L.lettura(N,"xau","2026-11-10")[0].n})());
+{const N=[nn({tipo:"fine",sic:4,d:"2026-11-10"}),nn({tipo:"fine",sic:2,d:"2026-11-11"})];const T=[t({d:"2026-11-10",res:1}),t({d:"2026-11-11",res:-1})];
+ const s=L.sicTable(N,T,"xau");ok("sicurezza: trade per giorno di fine sessione",s.length===2&&s.find(x=>x.k===4).wr===100&&s.find(x=>x.k===2).wr===0);}
+{const N=[nn({tf:"D",bias:"up",txt:"riga 1\nriga 2",imgs:["p/1.png"]}),nn({tipo:"fine",sic:5,piano:true,txt:"bene",ora:"11:00"})];const T=[t({d:"2026-11-10",ora:"08:30",why:"pattern",rr:2,res:1,r:2,less:"ok"})];
+ const md=L.esportaMd(N,T,"xau","2026-11-01","2026-11-30",{"p/1.png":"https://x/1.png"});
+ ok("esporta: giorno, nota, trade, fine e link immagine",/## 10\.11\.2026/.test(md)&&/08:00 · D · ↑ rialzo: riga 1 \/ riga 2/.test(md)&&/!\[\]\(https:\/\/x\/1\.png\)/.test(md)&&/TRADE long/.test(md)&&/perché: pattern/.test(md)&&/FINE SESSIONE · sicurezza 5\/5 · piano sì: bene/.test(md),md);
+ ok("esporta: fuori periodo niente",!/10\.11/.test(L.esportaMd(N,T,"xau","2026-12-01","2026-12-31",{})));}
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

@@ -242,6 +242,74 @@ input.calc.ok{color:var(--win)}input.calc.no{color:var(--loss)}
 .busy{opacity:.6;pointer-events:none}
 .empty{padding:26px 10px;text-align:center;color:var(--mute);font-size:13px;line-height:1.6}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+
+/* ---- diario di sessione (2026-11-11) ---- */
+.sesbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.sesbar .seg{width:auto;grid-auto-columns:auto}.sesbar .seg button{font-family:var(--m);font-weight:600;padding:7px 16px}
+.dnav{display:flex;gap:6px;align-items:center}
+.dnav>button:not(.cta){width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--g1);font-size:15px}
+.dnav input{width:auto;font-size:14px;padding:7px 10px;color-scheme:dark}
+.slay{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media(max-width:900px){.slay{grid-template-columns:1fr}.sside{order:-1;position:static!important}}
+.sside{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px}
+.sside .clock b{font-size:30px}
+.wins{display:flex;gap:6px;margin-top:10px}
+.wins span{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--mute);font-family:var(--m)}
+.wins span.on{border-color:var(--win);color:var(--win)}
+.mtf div{display:grid;grid-template-columns:40px minmax(0,1fr) 16px;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.mtf div:first-child{border-top:0;padding-top:0}
+.mtf b{font-family:var(--m);font-size:12px}
+.mtf p{margin:0;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mtf p em{font-style:normal;color:var(--dim);font-size:11px}
+.mtf i{font-style:normal;text-align:right;font-weight:700}
+.mtf .vuoto p{color:var(--dim);font-style:italic}
+.up{color:var(--win)}.dn{color:var(--loss)}.nt{color:var(--amber)}
+.mini{font-size:12px;color:var(--mute)}.mini b{color:var(--ink);font-weight:600}
+.feed{display:flex;flex-direction:column;gap:12px;padding-bottom:240px;min-width:0}
+.fday{font-size:12px;color:var(--dim);text-align:center}
+.fe{display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px}
+.fe .fo{font-family:var(--m);font-size:12px;color:var(--dim);padding-top:13px;text-align:right}
+.ncard{background:var(--g1);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.ncard .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.ncard p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ncard p.less{color:var(--mute);border-left:2px solid var(--line-hi);padding-left:10px;margin-top:10px}
+.ncard.trade{border-color:var(--line-hi);background:linear-gradient(180deg,rgba(255,255,255,.08),var(--g1))}
+.ncard.fine{border-style:dashed}
+.tfb{font-family:var(--m);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--g2)}
+.bias{font-size:12px;font-weight:600}
+.nres{font-family:var(--m);font-weight:700;font-size:13px}
+.nact{margin-left:auto;display:flex;gap:4px}
+.nact button{font-size:12px;color:var(--dim);padding:2px 6px;border-radius:6px}
+.nact button:hover{color:var(--ink);background:var(--g2)}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:10px}
+.shot{display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--g2);cursor:zoom-in}
+.shot img{display:block;width:100%;height:auto;min-height:60px}
+.shot.none{display:none}
+.comp{position:fixed;left:0;right:0;bottom:0;z-index:6;background:linear-gradient(180deg,transparent,var(--bg) 22%);padding:24px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.cin2{max-width:1220px;margin:0 auto;padding-right:338px}
+@media(max-width:900px){.cin2{padding-right:0}}
+.box{background:#141414;border:1px solid var(--line-hi);border-radius:16px;padding:10px 12px;box-shadow:0 -10px 40px rgba(0,0,0,.4)}
+.crow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12px;font-family:var(--m);font-weight:700;color:var(--mute)}
+.chip.on{border-color:var(--acc);color:var(--ink);background:var(--acc-soft)}
+.chip.b{font-family:var(--f);font-weight:500}
+.chip.b.on.up,.chip.on.up{border-color:var(--win);color:var(--win);background:transparent}.chip.b.on.dn,.chip.on.dn{border-color:var(--loss);color:var(--loss);background:transparent}.chip.b.on.nt{border-color:var(--amber);color:var(--amber);background:transparent}
+.clab{font-size:12px;color:var(--dim)}
+.sep{width:1px;height:18px;background:var(--line);margin:0 3px}
+.cora,.cin input{width:auto!important;font-size:13px!important;padding:4px 8px!important;border-radius:8px!important;color-scheme:dark}
+.cin{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}.cin input{width:72px!important}
+.box textarea{width:100%;min-height:52px;max-height:40vh;background:none;border:0;padding:4px 2px;resize:vertical;outline:none;font-size:15px}
+.cbot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cths{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.cth{position:relative;display:block;height:44px;width:72px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.cth img{width:100%;height:100%;object-fit:cover}
+.cth button{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:12px;line-height:1}
+.cbtn{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border-radius:10px;padding:8px 14px;font-weight:600;font-size:13px}
+.btn.pri{background:var(--acc);color:var(--acc-ink)}
+.btn.gh{background:var(--g2);border:1px solid var(--line)}
+.cal .d .dots i.n{background:var(--mute);width:5px;height:5px}
+@media(max-width:640px){.hd{flex-wrap:wrap;gap:10px}.hd .nav{order:3;flex-basis:100%;overflow-x:auto}#hdDate{display:none}.sside .blk:nth-child(3){display:none}.fe{grid-template-columns:1fr}.fe .fo{text-align:left;padding:0}}
 </style>
 </head>
 <body>
@@ -257,7 +325,7 @@ input.calc.ok{color:var(--win)}input.calc.no{color:var(--loss)}
 <div class="app" id="app" hidden>
   <header class="hd">
     <h1>Journal</h1>
-    <nav class="nav" id="nav"><a href="#home" data-v="home">Home</a><a href="#calendario" data-v="calendario">Calendario</a><a href="#trade" data-v="trade">Trade</a><a href="#statistiche" data-v="statistiche">Statistiche</a></nav>
+    <nav class="nav" id="nav"><a href="#sessione" data-v="sessione">Sessione</a><a href="#calendario" data-v="calendario">Calendario</a><a href="#trade" data-v="trade">Trade</a><a href="#statistiche" data-v="statistiche">Statistiche</a></nav>
     <div class="right"><span id="hdDate"></span><button class="cta" id="newBtn" type="button">+ Nuovo trade</button><button class="gear" id="gearBtn" type="button" aria-label="Impostazioni">⚙</button></div>
   </header>
   <main id="view"></main>

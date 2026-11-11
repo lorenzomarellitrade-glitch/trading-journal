@@ -19,20 +19,66 @@ try{
  await W(200);
  ok("app visibile, login nascosto",!$("#app").hidden&&$("#login").hidden);
  const N=window.__rows.length;
- // ---- HOME
- await go("#home");
- ok("home: orologio parte",/\d\d:\d\d:\d\d/.test($("#clk").textContent));
- ok("home: finestre di Lore nel blocco Adesso",/la mia · mattina/.test($("#sess").textContent)&&/08:00-10:30|aperta/.test($("#sess").textContent));
- if(N===0){ok("home vuota: messaggio del primo trade",/nessun trade/i.test($("#view").textContent))}
- else{ok("home: kpi dai dati veri",$$(".kpi").length>=4&&/win rate/.test($("#view").textContent));ok("home: ultima lezione letta (la più recente)",/Pazienza sul 1H/.test($("#view").textContent))}
- await clk($('[data-pre="dubito di me"]'));ok("home: stato prima selezionato",$('[data-pre="dubito di me"]').classList.contains("on"));
+ // ---- SESSIONE (diario)
+ await go("#sessione");
+ const oggi=new Date(),kOggi=oggi.getFullYear()+"-"+String(oggi.getMonth()+1).padStart(2,"0")+"-"+String(oggi.getDate()).padStart(2,"0");
+ ok("sessione: si apre da sola, menu su Sessione",!!$("#comp")&&$('#nav a[data-v="sessione"]').classList.contains("on"));
+ ok("sessione: orologio parte",/\d\d:\d\d:\d\d/.test($("#clk").textContent));
+ ok("sessione: oro con le due finestre",$$("[data-w]").length===2&&/8:00–10:30/.test($("#win").textContent));
+ ok("sessione: oro da W a M5",$$("[data-ctf]").map(b=>b.dataset.ctf).join()==="W,D,H4,H1,M15,M5");
+ ok("sessione: giorno di oggi",$("#sesDate").value===kOggi);
+ ok("sessione vuota oggi: messaggio",/La sessione è vuota/.test($("#feed").textContent));
+ await clk($("#cInvia"));ok("sessione: nota vuota non parte",/Scrivi cosa vedi/.test($("#toast").textContent));
+ await clk($('[data-ctf="H4"]'));await clk($('[data-cb="up"]'));
+ ok("sessione: time frame e bias scelti",$('[data-ctf="H4"]').classList.contains("on")&&$('[data-cb="up"]').classList.contains("on"));
+ await typ("#cTxt","Compressione nella PRZ");
+ {const b=new Blob([Uint8Array.from(atob("R0lGODlhAQABAAAAACwAAAAAAQABAAA="),c=>c.charCodeAt(0))],{type:"image/png"});const dt=new DataTransfer();dt.items.add(new File([b],"s.png",{type:"image/png"}));const pe=new Event("paste",{bubbles:true});Object.defineProperty(pe,"clipboardData",{value:dt});document.dispatchEvent(pe);await W(80)}
+ ok("sessione: screenshot incollato nel compositore, testo rimasto",$$(".cth img").length===1&&$("#cTxt").value==="Compressione nella PRZ");
+ await clk($("#cInvia"));await W(250);
+ {const w=window.__W.filter(x=>x[0]==="insertN");const r=w[0]&&w[0][1];
+  ok("sessione: nota salvata con mercato, giorno, ora, TF, bias, testo",w.length===1&&r.strategia==="xau"&&r.data===kOggi&&/^\d\d:\d\d$/.test(r.ora)&&r.tf==="H4"&&r.bias==="up"&&r.testo==="Compressione nella PRZ"&&r.tipo==="nota",JSON.stringify(r));
+  ok("sessione: screenshot caricato e scritto nella nota",window.__files.some(f=>f.startsWith("uid-1/note-"+r.id+"/"))&&window.__W.some(x=>x[0]==="updateN"&&x[1].immagini.length===1));}
+ ok("sessione: nota nel flusso e nella lettura, compositore pulito",/Compressione nella PRZ/.test($("#feed").textContent)&&/Compressione nella PRZ/.test($(".mtf").textContent)&&$("#cTxt").value===""&&$$(".cth").length===0);
+ ok("sessione: lettura con il daily di 9 giorni fa scaduto",/ancora niente/.test([...$$(".mtf div")].find(d=>d.querySelector("b").textContent==="D").textContent));
+ {const card=$$(".ncard").find(c=>/Compressione/.test(c.textContent));await clk(card.querySelector("[data-nedit]"))}
+ ok("modifica nota: testo nel compositore",$("#cTxt").value==="Compressione nella PRZ"&&/modificando/.test($("#comp").textContent)&&$$(".cth img").length===1);
+ await typ("#cTxt","Compressione nella PRZ, aspetto Asia");await clk($("#cInvia"));await W(200);
+ ok("modifica nota: aggiornata",window.__W.filter(x=>x[0]==="updateN").slice(-1)[0][1].testo==="Compressione nella PRZ, aspetto Asia"&&/aspetto Asia/.test($("#feed").textContent));
+ {const card=$$(".ncard").find(c=>/aspetto Asia/.test(c.textContent));await clk(card.querySelector("[data-ndel]"))}
+ ok("elimina nota: chiede conferma",/sì, elimina/.test($("#feed").textContent));
+ await clk($$("[data-ndel]").find(b=>/sì/.test(b.textContent)));await W(150);
+ ok("elimina nota: tolta con le immagini",window.__W.some(x=>x[0]==="deleteN")&&!/aspetto Asia/.test($("#feed").textContent));
+ // screenshot che non si carica: niente doppioni, si riprova
+ {const nI=window.__W.filter(x=>x[0]==="insertN").length;window.__FAILUP=true;
+  await typ("#cTxt","Nota con screenshot difficile");
+  const b=new Blob([Uint8Array.from(atob("R0lGODlhAQABAAAAACwAAAAAAQABAAA="),c=>c.charCodeAt(0))],{type:"image/png"});const dt=new DataTransfer();dt.items.add(new File([b],"s.png",{type:"image/png"}));const pe=new Event("paste",{bubbles:true});Object.defineProperty(pe,"clipboardData",{value:dt});document.dispatchEvent(pe);await W(80);
+  await clk($("#cInvia"));await W(250);
+  ok("screenshot fallito: nota salvata una volta, compositore pieno con avviso",window.__W.filter(x=>x[0]==="insertN").length===nI+1&&$$(".cth img").length===1&&/già salvato/.test($("#comp").textContent)&&/non sono entrati/.test($("#toast").textContent),$("#toast").textContent);
+  window.__FAILUP=false;await clk($("#cInvia"));await W(250);
+  const u=window.__W.filter(x=>x[0]==="updateN").slice(-1)[0][1];
+  ok("screenshot fallito: riprova senza doppione e collega l'immagine",window.__W.filter(x=>x[0]==="insertN").length===nI+1&&u.testo==="Nota con screenshot difficile"&&u.immagini.length===1&&$$(".cth").length===0&&!/già salvato/.test($("#comp").textContent));}
+ // giorno passato
+ await clk($('[data-dg="-1"]'));const ieri=$("#sesDate").value;
+ ok("giorno prima: data cambiata e tasto oggi",ieri<kOggi&&!!$('[data-dg="0"]'));
+ await clk($('[data-ctf="D"]'));await typ("#cTxt","Scritta il giorno dopo");await typ("[data-cora]","17:20");await clk($("#cInvia"));await W(200);
+ {const r=window.__W.filter(x=>x[0]==="insertN").slice(-1)[0][1];ok("giorno prima: nota con data di ieri e orario scelto",r.data===ieri&&r.ora==="17:20"&&r.tf==="D",JSON.stringify(r))}
+ await clk($('[data-dg="0"]'));ok("torna a oggi",$("#sesDate").value===kOggi);
+ // forex
+ await clk($('[data-sm="fx"]'));
+ ok("forex: da W a H1, niente finestre",$$("[data-ctf]").map(b=>b.dataset.ctf).join()==="W,D,H4,H1"&&!$("[data-w]")&&/il setup decide/.test($("#view").textContent));
+ await clk($('[data-cmode="trade"]'));ok("forex: trade parte con due posizioni",$("[data-cpos]").classList.contains("on"));
+ await clk($('[data-cmode="nota"]'));await clk($('[data-sm="xau"]'));
  // ---- NUOVO TRADE dal calendario
  await go("#calendario");
  ok("calendario: 7 intestazioni e giorni",$$(".cal .h").length===7&&$$(".cal .d").length>=28);
- const oggi=new Date(),kOggi=oggi.getFullYear()+"-"+String(oggi.getMonth()+1).padStart(2,"0")+"-"+String(oggi.getDate()).padStart(2,"0");const day=$$(".cal .d[data-cal]").find(d=>d.dataset.cal===kOggi);await clk(day);
- ok("calendario: tocco sul giorno apre il nuovo trade",!$("#sheet").hidden&&/Nuovo trade/.test($("#sheetIn h2").textContent));
+ let day=$$(".cal .d[data-cal]").find(d=>d.dataset.cal===kOggi);await clk(day);await W(60);
+ ok("calendario: tocco sul giorno apre il diario di quel giorno",location.hash==="#sessione"&&$("#sesDate").value===kOggi&&$("#sheet").hidden);
+ await go("#calendario");ok("calendario: pallino delle note",$$(".cal .d .dots i.n").length>=1);
+ day=$$(".cal .d[data-cal]").find(d=>d.dataset.cal===kOggi);
+ await clk($("[data-newday]"));
+ ok("calendario: + trade apre il nuovo trade",!$("#sheet").hidden&&/Nuovo trade/.test($("#sheetIn h2").textContent));
  ok("nuovo: data del giorno toccato",$('[data-ff="d"]').value===day.dataset.cal);
- ok("nuovo: stato 'prima' già segnato dalla home",/dubito di me/.test($(".sum").textContent));
+ ok("nuovo: campo perché entro",!!$('[data-ff="why"]'));$('[data-ff="why"]').value="Rottura pulita";$('[data-ff="why"]').dispatchEvent(new Event("input",{bubbles:true}));await W(30);
  ok("nuovo: orario precompilato e sessione a pulsanti",/\d\d:\d\d/.test($('[data-ff="ora"]').value)&&$$("[data-fse]").length===5);
  await typ('[data-ff="ora"]',"16:45");ok("nuovo: cambiando l'orario la sessione segue",$('[data-fse="Londra + New York"]').classList.contains("on"));
  await clk($('[data-fse="Londra"]'));ok("nuovo: sessione scelta a mano",$('[data-fse="Londra"]').classList.contains("on"));
@@ -55,13 +101,13 @@ try{
  ok("nuovo: screenshot incollato compare",$$(".drop .thumbs img").length===1&&/immagini[^\d]*2/.test($(".sum").textContent.replace(/\s+/g," ")));
  await clk($("#saveSheet"));await W(250);
  ok("salva: scheda chiusa e toast",$("#sheet").hidden&&/salvato/.test($("#toast").textContent),$("#toast").textContent);
- const ins=window.__W.filter(w=>w[0]==="insert");ok("salva: una riga inserita con i dati giusti",ins.length===1&&ins[0][1].direzione==="short"&&ins[0][1].checklist.join()==="1,1,1,1,1"&&ins[0][1].confluenze.includes("mia confluenza")&&ins[0][1].sessione==="Londra"&&ins[0][1].ora==="16:45"&&ins[0][1].aperto===true&&ins[0][1].stato_prima==="dubito di me"&&ins[0][1].rischio===1&&ins[0][1].rr===2,JSON.stringify(ins[0]&&ins[0][1]));
- ok("salva: screenshot caricato nella cartella dell'utente",window.__files.length===1&&window.__files[0].startsWith("uid-1/u"));
+ const ins=window.__W.filter(w=>w[0]==="insert");ok("salva: una riga inserita con i dati giusti",ins.length===1&&ins[0][1].direzione==="short"&&ins[0][1].checklist.join()==="1,1,1,1,1"&&ins[0][1].confluenze.includes("mia confluenza")&&ins[0][1].sessione==="Londra"&&ins[0][1].ora==="16:45"&&ins[0][1].aperto===true&&ins[0][1].motivo==="Rottura pulita"&&ins[0][1].rischio===1&&ins[0][1].rr===2,JSON.stringify(ins[0]&&ins[0][1]));
+ ok("salva: screenshot caricato nella cartella dell'utente",window.__files.filter(f=>!f.includes("/note-")).length===1&&window.__files.filter(f=>!f.includes("/note-"))[0].startsWith("uid-1/u"));
  const up=window.__W.filter(w=>w[0]==="update");ok("salva: percorso immagine scritto nel trade",up.length===1&&up[0][1].immagini.length===1);
  ok("calendario: il giorno mostra il trade aperto",/aperto/.test($("#view").textContent));
- // ---- CHIUSURA dalla home
- await go("#home");ok("home: blocco trade aperto",!!$("[data-close]"));ok("home: trade aperto con rischio e RR",/rischio 1 % · 1:2/.test($("#view").textContent));
- await clk($("[data-close]"));ok("chiudi: scheda di chiusura con galleria",/Chiudi il trade/.test($("#sheetIn h2").textContent)&&$$(".gal a").length===2);
+ // ---- CHIUSURA dal flusso della sessione
+ await go("#sessione");const idT=ins[0][1].id;ok("sessione: trade nel flusso con perché, rischio e RR",!!$('[data-close="'+idT+'"]')&&/Rottura pulita/.test($("#feed").textContent)&&/rischio 1 % · 1:2/.test($("#feed").textContent));
+ await clk($('[data-close="'+idT+'"]'));ok("chiudi: scheda di chiusura con galleria",/Chiudi il trade/.test($("#sheetIn h2").textContent)&&$$(".gal a").length===2);
  await clk($("#saveSheet"));ok("chiudi: senza esito non salva",!$("#sheet").hidden&&/Manca l'esito/.test($("#toast").textContent));
  ok("chiudi: quattro pulsanti con i valori",$$("[data-fout]").length===4&&/\+2,00 %/.test($('[data-fout="tp"]').textContent)&&/-1,00 %/.test($('[data-fout="sl"]').textContent));
  await clk($('[data-fout="tp"]'));ok("chiudi: TP preso = +2 % e +2 R",/\+2,00 % · \+2 R/.test($("#sheetIn").textContent));
@@ -72,11 +118,17 @@ try{
  await clk($("#saveSheet"));await W(200);
  const cl=window.__W.filter(w=>w[0]==="update").slice(-1)[0][1];
  ok("chiudi: riga aggiornata (esito, R, piano no, stato dopo, lezione, chiuso)",cl.esito_pct===-1&&cl.r===-1&&!("rrTxt" in cl)&&!("out" in cl)&&cl.piano===false&&cl.stato_dopo==="ci penso troppo"&&cl.lezione==="Entrato presto."&&cl.aperto===false,JSON.stringify(cl));
- ok("home: lezione nuova in home",/Entrato presto/.test($("#view").textContent));
+ ok("sessione: lezione e esito nel flusso",/Entrato presto/.test($("#feed").textContent)&&/-1,00 %/.test($("#feed").textContent));
+ // ---- TRADE dal compositore
+ await clk($('[data-cmode="trade"]'));ok("compositore trade: rischio 2, posizione unica sull'oro",$("[data-crisk]").value==="2"&&!$("[data-cpos]").classList.contains("on"));
+ await typ("[data-crr]","1:x");await clk($("#cInvia"));ok("compositore trade: RR sbagliato non salva",/RR non valido/.test($("#toast").textContent));
+ await typ("[data-crr]","1:2");await clk($('[data-cdir="short"]'));await typ("#cTxt","Fallimento e rottura al 5'");await clk($("#cInvia"));await W(250);
+ {const r=window.__W.filter(x=>x[0]==="insert").slice(-1)[0][1];ok("compositore trade: salvato aperto con motivo",r.direzione==="short"&&r.rischio===2&&r.rr===2&&r.motivo==="Fallimento e rottura al 5'"&&r.aperto===true&&r.strategia==="xau"&&r.data===kOggi&&r.posizioni===null&&r.checklist.length===5,JSON.stringify(r));
+  ok("compositore trade: nel flusso con Chiudi il trade",!!$('[data-close="'+r.id+'"]')&&$("#cTxt").value===""&&!$("[data-crisk]"));}
  // ---- LISTA TRADE
  await go("#trade");
- ok("trade: quadrotti con immagine",$$(".tcard").length===N+1&&$$(".tcard .im img").length>=1);
- await clk($('[data-tv="list"]'));ok("trade: vista lista",$$(".tlist .tr").length===N+1);
+ ok("trade: quadrotti con immagine",$$(".tcard").length===N+2&&$$(".tcard .im img").length>=1);
+ await clk($('[data-tv="list"]'));ok("trade: vista lista",$$(".tlist .tr").length===N+2);
  await clk($('[data-tf="fx"]'));ok("trade: filtro forex",$$(".tlist .tr").length===window.__rows.filter(r=>r.strategia==="fx").length);
  await clk($('[data-tf="all"]'));await clk($('[data-tv="grid"]'));
  // ---- MODIFICA ed ELIMINA
@@ -86,7 +138,7 @@ try{
  await typ('[data-ff="rrTxt"]',"1:2");
  await clk($("#delAsk"));ok("elimina: chiede conferma",!!$("#delYes"));
  await clk($("#delYes"));await W(150);
- ok("elimina: riga tolta e immagini rimosse",window.__rows.length===N&&window.__W.some(w=>w[0]==="remove")&&$("#sheet").hidden);
+ ok("elimina: riga tolta e immagini rimosse",window.__rows.length===N+1&&window.__W.some(w=>w[0]==="remove")&&$("#sheet").hidden);
  // ---- DUE POSIZIONI (forex: 2 % = 1 % a TP1 1:1 + 1 % a TP finale)
  await go("#nuovo");await clk($('[data-fs="fx"]'));
  ok("due posizioni: sul forex parte con due posizioni",$('[data-fpos="2"]').classList.contains("on")&&$('[data-ff="p1r"]').value==="1"&&$('[data-calc="r2"]').value==="1"&&$('[data-ff="p1rr"]').value==="1:1");
@@ -98,7 +150,7 @@ try{
  await clk($("#saveSheet"));await W(250);
  const ins2=window.__W.filter(w=>w[0]==="insert").slice(-1)[0][1];
  ok("due posizioni: riga salvata",ins2.strategia==="fx"&&ins2.rischio===2&&ins2.rr===3&&ins2.posizioni&&ins2.posizioni.rischio1===1&&ins2.posizioni.rr1===1&&ins2.posizioni.esito1===null,JSON.stringify(ins2));
- await go("#home");ok("due posizioni: home con le due posizioni",/2 posizioni · 1:1 \/ 1:3/.test($("#view").textContent));
+ await go("#sessione");await clk($('[data-sm="fx"]'));ok("due posizioni: nel flusso forex",/2 posizioni · 1:1 \/ 1:3/.test($("#feed").textContent));
  await clk($("[data-close]"));ok("due posizioni: chiusura con due file di pulsanti",$$("[data-po1]").length===3&&$$("[data-po2]").length===4);
  await clk($('[data-po1="tp"]'));await clk($("#saveSheet"));ok("due posizioni: con una sola posizione scelta non chiude",!$("#sheet").hidden&&/Manca l'esito/.test($("#toast").textContent));
  await clk($('[data-po2="be"]'));ok("due posizioni: TP1 + pareggio = +1 %, +0,5 R",/\+1,00 % · \+0,5 R/.test($("#sheetIn").textContent));
@@ -109,7 +161,9 @@ try{
  ok("due posizioni: riga chiusa",cl2.esito_pct===4&&cl2.r===2&&cl2.aperto===false&&cl2.posizioni.esito1==="tp"&&cl2.posizioni.esito2==="tp"&&cl2.posizioni.esito2_pct===null,JSON.stringify(cl2));
  // ---- STATISTICHE
  await go("#statistiche");
- ok("statistiche: 4 blocchi e grafici",$$(".blk").length===5&&$$("svg").length>=1);
+ ok("statistiche: blocchi e grafici",$$(".blk").length===8&&$$("svg").length>=1,$$(".blk").length);
+ if(N){ok("statistiche: time frame a favore del bias (daily)",/trade a favore del bias/.test($("#view").textContent)&&$$(".hbars")[0].textContent.includes("D"));ok("statistiche: sicurezza a fine sessione",/4\/5/.test($("#view").textContent))}
+ await clk($("[data-exp]"));await W(100);ok("esporta: file per Sara con note e trade",/# Diario XAUUSD/.test(window.__ultimoExport||"")&&/Scritta il giorno dopo/.test(window.__ultimoExport)&&/TRADE short/.test(window.__ultimoExport)||/TRADE/.test(window.__ultimoExport),(window.__ultimoExport||"").slice(0,200));
  await clk($('[data-st="fx"]'));ok("statistiche: passa a forex",$('[data-st="fx"]').classList.contains("on")&&/swing/.test($("#view").textContent));
  // ---- IMPOSTAZIONI
  await clk($("#gearBtn"));ok("impostazioni: stato archivio e mail",/collegato/.test($("#syncSt").textContent)&&/test@test.it/.test($("#who").textContent));

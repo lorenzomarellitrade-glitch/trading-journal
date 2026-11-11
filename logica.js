@@ -21,8 +21,8 @@ const mm=h=>pad(Math.floor(h))+":"+pad(Math.round((h%1)*60));
 function sessState(h){return SESS.map(([n,a,b])=>({n,a,b,on:a<b?(h>=a&&h<b):(h>=a||h<b)}))}
 
 /* Conversione riga Supabase <-> trade in memoria */
-function rowToT(r){return{id:r.id,s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,rr:r.rr==null?null:+r.rr,pos:posDaRiga(r.posizioni),less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
-function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,rr:t.rr==null?null:+t.rr,posizioni:posInRiga(t.pos),lezione:t.less||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
+function rowToT(r){return{id:r.id,why:r.motivo||"",s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,rr:r.rr==null?null:+r.rr,pos:posDaRiga(r.posizioni),less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
+function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,rr:t.rr==null?null:+t.rr,posizioni:posInRiga(t.pos),lezione:t.less||"",motivo:t.why||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
 function sortT(T){return T.sort((a,b)=>(a.d+(a.ora||""))<(b.d+(b.ora||""))?-1:(a.d+(a.ora||""))>(b.d+(b.ora||""))?1:0)}
 
 /* RR e livelli (Lore, 2026-11-09): l'RR si scrive 1:2; SL e TP in % vengono dal rischio */
@@ -58,6 +58,34 @@ function curve(list){let a=0;return list.map(t=>a+=t.res)}
 function serieP(T){let n=0;for(const t of closedOf(T).slice().reverse()){if(t.piano!==false)n++;else break}return n}
 function weekOf(T,today){const mon=new Date(today);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const k=dk(mon);return T.filter(t=>!t.open&&t.d>=k)}
 
-const L={pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+
+/* Diario di sessione (Lore, 2026-11-11): note libere per time frame, con screenshot. Oro da W a M5, Forex da W a H1 */
+const TFS={xau:["W","D","H4","H1","M15","M5"],fx:["W","D","H4","H1"]};
+const BIAS={up:"↑ rialzo",dn:"↓ ribasso",nt:"↔ neutro"};
+function rowToN(r){return{id:r.id,s:r.strategia,d:r.data,ora:r.ora||"",tf:r.tf||null,bias:r.bias||null,txt:r.testo||"",imgs:r.immagini||[],tipo:r.tipo||"nota",sic:r.sicurezza==null?null:+r.sicurezza,piano:r.piano==null?null:!!r.piano}}
+function nToRow(n){const o={strategia:n.s,data:n.d,ora:n.ora||null,tf:n.tf||null,bias:n.bias||null,testo:n.txt||"",immagini:n.imgs||[],tipo:n.tipo||"nota",sicurezza:n.sic==null?null:+n.sic,piano:n.piano==null?null:!!n.piano};if(n.id&&!String(n.id).startsWith("n"))o.id=n.id;return o}
+const kOra=x=>x.ora||"99:99";
+/* il flusso di un giorno: note e trade in ordine di orario; senza orario in fondo; la chiusura della sessione sempre ultima */
+function flusso(N,T,s,d){const a=N.filter(n=>n.s===s&&n.d===d).map(x=>({k:x.tipo==="fine"?"fine":"nota",x})),b=T.filter(t=>t.s===s&&t.d===d).map(x=>({k:"trade",x}));return[...a,...b].map((e,i)=>({...e,i})).sort((p,q)=>(p.k==="fine")-(q.k==="fine")||(kOra(p.x)<kOra(q.x)?-1:kOra(p.x)>kOra(q.x)?1:p.i-q.i)).map(({i,...e})=>e)}
+const giorni=(a,b)=>{const u=k=>{const[y,m,g]=String(k).split("-").map(Number);return Date.UTC(y,m-1,g)/864e5};return u(b)-u(a)};
+/* quanto vale una lettura nel tempo: Weekly 7 giorni (oggi + 6), Daily 3 (oggi + 2), gli altri solo il giorno stesso */
+const VALE={W:6,D:2};
+/* con un orario: nello stesso giorno contano solo le note con un orario non successivo */
+function prima(n,d,ora){return n.d<d||(n.d===d&&(!ora||(!!n.ora&&n.ora<=ora)))}
+/* l'ultima lettura di ogni time frame valida per quel giorno (e quell'ora) */
+function lettura(N,s,d,ora){return TFS[s].map(tf=>{const L=N.filter(n=>n.s===s&&n.tf===tf&&n.tipo!=="fine"&&prima(n,d,ora)&&giorni(n.d,d)<=(VALE[tf]||0)).sort((a,b)=>(a.d+kOra(a))<(b.d+kOra(b))?-1:1);return{tf,n:L[L.length-1]||null}})}
+/* trade a favore o contro il bias di ogni time frame (solo bias rialzo/ribasso) */
+function allineamento(N,T,s){const L=closedOf(T,s);return TFS[s].map(tf=>{const con=[];L.forEach(t=>{const l=lettura(N,s,t.d,t.ora).find(x=>x.tf===tf).n;if(l&&(l.bias==="up"||l.bias==="dn"))con.push({...t,_a:(l.bias==="up")===(t.dir==="long")})});return{k:tf,...splitBy(con,t=>t._a)}}).filter(x=>x.with.n+x.without.n>0)}
+/* sicurezza di fine sessione (1-5) e trade di quel giorno */
+function sicTable(N,T,s){const L=closedOf(T,s);return[1,2,3,4,5].map(k=>{const D=new Set(N.filter(n=>n.s===s&&n.tipo==="fine"&&n.sic===k).map(n=>n.d));return{k,giorni:D.size,...stats(L.filter(t=>D.has(t.d)))}}).filter(x=>x.giorni)}
+/* testo per Sara: il diario di un periodo, con i link alle immagini */
+function esportaMd(N,T,s,da,a,url){const u=p=>url&&url[p]?url[p]:p;const D=[...new Set([...N,...T].filter(x=>x.s===s&&x.d>=da&&x.d<=a).map(x=>x.d))].sort();let o="# Diario "+STRAT[s].n+" · "+fmtD(da)+" - "+fmtD(a)+"\n";
+ D.forEach(d=>{o+="\n## "+fmtD(d)+"\n";flusso(N,T,s,d).forEach(({k,x})=>{const im=(x.imgs||[]).map(p=>"\n  ![]("+u(p)+")").join("");
+  if(k==="nota")o+="\n- "+(x.ora||"--:--")+" · "+(x.tf||"nota")+(x.bias?" · "+BIAS[x.bias]:"")+": "+x.txt.replace(/\n/g," / ")+im;
+  else if(k==="fine")o+="\n- FINE SESSIONE · sicurezza "+(x.sic==null?"-":x.sic+"/5")+" · piano "+(x.piano==null?"-":x.piano?"sì":"no")+": "+x.txt.replace(/\n/g," / ");
+  else o+="\n- "+(x.ora||"--:--")+" · TRADE "+x.dir+" · rischio "+(x.risk==null?"-":x.risk+" %")+(x.rr?" · RR "+fmtRR(x.rr):"")+(x.pos?" · 2 posizioni":"")+" · "+(x.open?"aperto":"esito "+pct(x.res)+(x.r==null?"":" · "+x.r+" R")+" · piano "+(x.piano===false?"no":"sì"))+(x.why?"\n  perché: "+x.why.replace(/\n/g," / "):"")+(x.less?"\n  lezione: "+x.less.replace(/\n/g," / "):"")+(x.tv?"\n  ![]("+tvImg(x.tv)+")":"")+im})
+  o+="\n"});return o}
+
+const L={TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);
