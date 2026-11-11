@@ -60,8 +60,18 @@ try{
  // giorno passato
  await clk($('[data-dg="-1"]'));const ieri=$("#sesDate").value;
  ok("giorno prima: data cambiata e tasto oggi",ieri<kOggi&&!!$('[data-dg="0"]'));
+ ok("giorno prima: avviso nel compositore con il giorno e il tasto per tornare a oggi",!!$("#avvGiorno")&&/non su oggi/.test($("#avvGiorno").textContent)&&!!$('#avvGiorno [data-dg="0"]'));
  await clk($('[data-ctf="D"]'));await typ("#cTxt","Scritta il giorno dopo");await typ("[data-cora]","17:20");await clk($("#cInvia"));await W(200);
  {const r=window.__W.filter(x=>x[0]==="insertN").slice(-1)[0][1];ok("giorno prima: nota con data di ieri e orario scelto",r.data===ieri&&r.ora==="17:20"&&r.tf==="D",JSON.stringify(r))}
+ // sposta la nota di ieri a oggi, e poi di nuovo a ieri
+ {const card=$$(".ncard").find(c=>/Scritta il giorno dopo/.test(c.textContent));await clk(card.querySelector("[data-nedit]"));
+  ok("sposta nota: in modifica compare il giorno",!!$("[data-cdata]")&&$("[data-cdata]").value===ieri&&!$("#avvGiorno"));
+  await typ("[data-cdata]",kOggi);await clk($("#cInvia"));await W(200);
+  const u=window.__W.filter(x=>x[0]==="updateN").slice(-1)[0][1];
+  ok("sposta nota: salvata con il giorno nuovo e tolta da ieri",u.data===kOggi&&u.testo==="Scritta il giorno dopo"&&!/Scritta il giorno dopo/.test($("#feed").textContent)&&/Nota spostata/.test($("#toast").textContent),JSON.stringify(u));
+  await clk($('[data-dg="0"]'));ok("sposta nota: compare su oggi, senza avviso",/Scritta il giorno dopo/.test($("#feed").textContent)&&!$("#avvGiorno"));
+  const c2=$$(".ncard").find(c=>/Scritta il giorno dopo/.test(c.textContent));await clk(c2.querySelector("[data-nedit]"));await typ("[data-cdata]",ieri);await clk($("#cInvia"));await W(200);
+  ok("sposta nota: rimessa a ieri",window.__W.filter(x=>x[0]==="updateN").slice(-1)[0][1].data===ieri);await clk($('[data-dg="-1"]'));}
  await clk($('[data-dg="0"]'));ok("torna a oggi",$("#sesDate").value===kOggi);
  // forex
  await clk($('[data-sm="fx"]'));
