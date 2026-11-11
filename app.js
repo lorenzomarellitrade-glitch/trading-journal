@@ -1,6 +1,6 @@
 // Journal di Lore: interfaccia + archivio su Supabase. La logica pura sta in logica.js (JL).
 (function(){
-const {pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
+const {normCoppia,coppie,coppiaTable,filtraC,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const today=new Date(); const TK=dk(today);
 const num=v=>v!=null&&v!==""&&isFinite(v);
@@ -40,6 +40,13 @@ const firstImg=(t,cls)=>t.imgs&&t.imgs.length?`<div class="${cls}"><img alt="" d
 function header(){$("hdDate").textContent=GG[today.getDay()]+" "+pad(today.getDate())+"."+pad(today.getMonth()+1)+" · "+(today.getHours()<12?"mattina":today.getHours()<18?"pomeriggio":"sera")}
 /* ===== SESSIONE: il diario (Lore, 2026-11-11) ===== */
 let sesS="xau",sesD=TK;
+/* coppia del Forex che sto guardando ("" = tutte) */
+let sesC="";try{sesC=normCoppia(localStorage.getItem("journal-coppia"))}catch(e){}
+/* le coppie scritte a mano restano tra le pillole anche prima della prima nota */
+let memC=[];try{memC=(JSON.parse(localStorage.getItem("journal-coppie")||"[]")||[]).map(normCoppia).filter(Boolean)}catch(e){}
+function setC(c){sesC=normCoppia(c);if(sesC&&!memC.includes(sesC))memC.push(sesC);try{localStorage.setItem("journal-coppia",sesC);localStorage.setItem("journal-coppie",JSON.stringify(memC))}catch(e){}}
+const sim=t=>t.s==="fx"&&t.c?t.c:STRAT[t.s]["sym"];
+const filtrati=c=>filtraC(N,T,c);
 const adesso=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
 const nuovoC=()=>({salvato:null,daCollegare:[],mode:"nota",tf:(C&&C.tf)||null,bias:null,txt:"",ora:"",pending:[],drop:[],edit:null,dir:"long",risk:STRAT[sesS].risk,rrTxt:"",pos:sesS==="fx",sic:null,piano:null,busy:false,delAsk:null});
 let C=null;C=nuovoC();
@@ -50,9 +57,9 @@ const nomeGiorno=k=>{const[y,m,g]=k.split("-").map(Number);const d=new Date(y,m-
 const shots=(imgs)=>imgs.length?`<div class="shots">${imgs.map(p=>`<a href="#" class="shot" data-big="${esc(p)}"><img alt="" data-path="${esc(p)}"></a>`).join("")}</div>`:"";
 const azioni=(id,trade)=>trade?`<span class="nact"><button type="button" data-open="${id}">modifica</button></span>`:`<span class="nact"><button type="button" data-nedit="${id}">modifica</button>${C.delAsk===id?`<button type="button" class="danger" data-ndel="${id}">sì, elimina</button>`:`<button type="button" data-ndel="${id}">elimina</button>`}</span>`;
 function cardFlusso({k,x}){
-  if(k==="nota")return`<div class="fe"><div class="fo">${esc(x.ora||"")}</div><div class="ncard"><div class="top"><span class="tfb">${esc(x.tf||"nota")}</span>${x.bias?`<span class="bias ${x.bias}">${BIAS[x.bias]}</span>`:""}${azioni(x.id)}</div>${x.txt?`<p>${esc(x.txt)}</p>`:""}${shots(x.imgs)}</div></div>`;
+  if(k==="nota")return`<div class="fe"><div class="fo">${esc(x.ora||"")}</div><div class="ncard"><div class="top">${x.c?`<span class="tfb pr">${esc(x.c)}</span>`:""}<span class="tfb">${esc(x.tf||"nota")}</span>${x.bias?`<span class="bias ${x.bias}">${BIAS[x.bias]}</span>`:""}${azioni(x.id)}</div>${x.txt?`<p>${esc(x.txt)}</p>`:""}${shots(x.imgs)}</div></div>`;
   if(k==="fine")return`<div class="fe"><div class="fo">${esc(x.ora||"")}</div><div class="ncard fine"><div class="top"><span class="tfb">FINE SESSIONE</span><span class="mini">sicurezza <b>${x.sic==null?"—":x.sic+"/5"}</b> · piano <b>${x.piano==null?"—":x.piano?"sì":"no"}</b></span>${azioni(x.id)}</div>${x.txt?`<p>${esc(x.txt)}</p>`:""}</div></div>`;
-  return`<div class="fe"><div class="fo">${esc(x.ora||"")}</div><div class="ncard trade"><div class="top"><span class="tfb">TRADE</span><b class="${x.dir==="long"?"up":"dn"}">${x.dir==="long"?"▲ long":"▼ short"}</b>${x.open?`<span class="mini">aperto</span>`:`<span class="nres ${x.res>0?"up":x.res<0?"dn":""}">${pct(x.res)}${x.r==null?"":" · "+fR(x.r)+" R"}</span>${x.piano===false?`<span class="mini">fuori piano</span>`:""}`}${azioni(x.id,true)}</div>${x.why?`<p>${esc(x.why)}</p>`:""}<div class="mini" style="margin-top:6px">rischio ${x.risk==null?"—":String(x.risk).replace(".",",")+" %"}${rrTesto(x)?" · "+rrTesto(x):""}</div>${shots(x.imgs)}${x.less?`<p class="less">${esc(x.less)}</p>`:""}${x.open?`<button type="button" class="cta sm" style="margin-top:10px" data-close="${x.id}">Chiudi il trade</button>`:""}</div></div>`;
+  return`<div class="fe"><div class="fo">${esc(x.ora||"")}</div><div class="ncard trade"><div class="top"><span class="tfb">TRADE</span>${x.c?`<span class="tfb pr">${esc(x.c)}</span>`:""}<b class="${x.dir==="long"?"up":"dn"}">${x.dir==="long"?"▲ long":"▼ short"}</b>${x.open?`<span class="mini">aperto</span>`:`<span class="nres ${x.res>0?"up":x.res<0?"dn":""}">${pct(x.res)}${x.r==null?"":" · "+fR(x.r)+" R"}</span>${x.piano===false?`<span class="mini">fuori piano</span>`:""}`}${azioni(x.id,true)}</div>${x.why?`<p>${esc(x.why)}</p>`:""}<div class="mini" style="margin-top:6px">rischio ${x.risk==null?"—":String(x.risk).replace(".",",")+" %"}${rrTesto(x)?" · "+rrTesto(x):""}</div>${shots(x.imgs)}${x.less?`<p class="less">${esc(x.less)}</p>`:""}${x.open?`<button type="button" class="cta sm" style="margin-top:10px" data-close="${x.id}">Chiudi il trade</button>`:""}</div></div>`;
 }
 function compositore(){
   const tfs=TFS[sesS],oggi=sesD===TK;
@@ -65,17 +72,19 @@ function compositore(){
   else{riga=`${tfs.map(tf=>`<button type="button" class="chip ${tf===C.tf?"on":""}" data-ctf="${tf}">${tf}</button>`).join("")}<span class="sep"></span>${Object.entries(BIAS).map(([k,v])=>`<button type="button" class="chip b ${k} ${C.bias===k?"on":""}" data-cb="${k}">${v}</button>`).join("")}<span class="sep"></span>${ora}`;ph="Cosa vedo, come lo vedo, cosa farei… (⌘V per lo screenshot)";bott=C.edit?`<button type="button" class="btn gh" id="cAnnulla">Annulla</button><button type="button" class="btn pri" id="cInvia">Salva la nota</button>`:`<button type="button" class="btn gh" data-cmode="trade">＋ Entro</button><button type="button" class="btn gh" data-cmode="fine">Chiudi sessione</button><button type="button" class="btn pri" id="cInvia">Invia</button>`}
   if(C.salvato)bott=`<button type="button" class="btn gh" id="cAnnulla">Annulla</button><button type="button" class="btn pri" id="cInvia">Riprova gli screenshot</button>`;
   else if(C.edit&&C.mode==="fine")bott=`<button type="button" class="btn gh" id="cAnnulla">Annulla</button><button type="button" class="btn pri" id="cInvia">Salva</button>`;
-  return`<div class="comp" id="comp"><div class="cin2"><div class="box ${C.busy?"busy":""}">${C.salvato?`<div class="mini" style="margin-bottom:6px;color:var(--amber)">già salvato · mancano ${C.pending.length+C.daCollegare.length} screenshot: premi di nuovo per riprovare, o Annulla</div>`:C.edit?`<div class="mini" style="margin-bottom:6px">stai modificando una nota</div>`:""}<div class="crow">${riga}</div><textarea id="cTxt" rows="2" placeholder="${ph}">${esc(C.txt)}</textarea><div class="cbot"><div class="cths">${th||`<span class="mini">⌘V incolla · trascina un'immagine · ⌘↵ invia${oggi?"":" · giorno passato: metti l'orario"}</span>`}</div><div class="cbtn">${bott}</div></div></div></div></div>`;
+  return`<div class="comp" id="comp"><div class="cin2"><div class="box ${C.busy?"busy":""}">${C.salvato?`<div class="mini" style="margin-bottom:6px;color:var(--amber)">già salvato · mancano ${C.pending.length+C.daCollegare.length} screenshot: premi di nuovo per riprovare, o Annulla</div>`:C.edit?`<div class="mini" style="margin-bottom:6px">stai modificando una nota</div>`:""}<div class="crow">${sesS==="fx"&&C.mode!=="fine"?(()=>{const b=C.edit?N.find(n=>n.id===C.edit):null,c=b?b.c:sesC;return`<span class="tfb pr" data-cpair>${esc(c)||"nessuna coppia"}</span><span class="sep"></span>`})():""}${riga}</div><textarea id="cTxt" rows="2" placeholder="${ph}">${esc(C.txt)}</textarea><div class="cbot"><div class="cths">${th||`<span class="mini">⌘V incolla · trascina un'immagine · ⌘↵ invia${oggi?"":" · giorno passato: metti l'orario"}</span>`}</div><div class="cbtn">${bott}</div></div></div></div></div>`;
 }
 function vSess(){
   const tfs=TFS[sesS];if(!tfs.includes(C.tf))C.tf=tfs[0];
-  const F=flusso(N,T,sesS,sesD),lt=lettura(N,sesS,sesD),tr=F.filter(e=>e.k==="trade").map(e=>e.x);
+  const cF=sesS==="fx"&&sesC?sesC:null,cL=sesS==="fx"?[...new Set([...coppie(N,T),...memC,...(sesC?[sesC]:[])])]:[];
+  const F=flusso(N,T,sesS,sesD).filter(e=>cF==null||!e.x.c||e.x.c===cF),lt=lettura(N,sesS,sesD,undefined,cF),tr=F.filter(e=>e.k==="trade").map(e=>e.x);
   return`<div class="sesbar enter"><div class="seg" id="mkt"><button type="button" data-sm="xau" class="${sesS==="xau"?"on":""}">XAUUSD</button><button type="button" data-sm="fx" class="${sesS==="fx"?"on":""}">FOREX</button></div>
    <div class="dnav"><button type="button" data-dg="-1" aria-label="Giorno prima">←</button><input type="date" id="sesDate" value="${sesD}"><button type="button" data-dg="1" aria-label="Giorno dopo">→</button>${sesD!==TK?`<button type="button" class="cta ghost sm" data-dg="0">oggi</button>`:""}</div></div>
-  <div class="slay enter"><div class="feed" id="feed"><div class="fday">${nomeGiorno(sesD)} · ${STRAT[sesS].n}</div>${F.length?F.map(cardFlusso).join(""):`<div class="empty"><b>${sesD===TK?"La sessione è vuota.":"Niente scritto in questo giorno."}</b>Scegli il time frame, incolla lo screenshot e scrivi cosa vedi. Anche i giorni senza trade contano.</div>`}</div>
+  ${sesS==="fx"?`<div class="pairs enter" id="pairs"><span class="clab">coppia</span><button type="button" class="chip ${sesC?"":"on"}" data-pc="">tutte</button>${cL.map(c=>`<button type="button" class="chip ${c===sesC?"on":""}" data-pc="${esc(c)}">${esc(c)}</button>`).join("")}<input type="text" id="newPair" autocomplete="off" autocapitalize="characters" placeholder="＋ nuova, es. EURUSD"></div>`:""}
+  <div class="slay enter"><div class="feed" id="feed"><div class="fday">${nomeGiorno(sesD)} · ${cF?esc(cF):STRAT[sesS].n}</div>${F.length?F.map(cardFlusso).join(""):`<div class="empty"><b>${sesD===TK?"La sessione è vuota.":"Niente scritto in questo giorno."}</b>Scegli il time frame, incolla lo screenshot e scrivi cosa vedi. Anche i giorni senza trade contano.</div>`}</div>
   <aside class="sside">
    <section class="blk"><div class="clock"><b id="clk">--:--:--</b><small id="clkSess"></small></div>${sesS==="xau"?`<div class="wins" id="win"><span data-w="La mia">8:00–10:30</span><span data-w="La mia 2">16:30–19:00</span></div>`:`<div class="note">Forex: nessuna finestra, il setup decide.</div>`}</section>
-   <section class="blk"><div class="lab"><span>La mia lettura</span><span>ultima nota per time frame</span></div><div class="mtf">${lt.map(({tf,n})=>n?`<div><b>${tf}</b><p title="${esc(n.txt)}">${esc(n.txt||"(solo immagine)")}${n.d!==sesD?` <em>· ${fmtD(n.d).slice(0,5)}</em>`:""}</p><i class="${n.bias||""}">${n.bias?BIAS[n.bias].slice(0,1):""}</i></div>`:`<div class="vuoto"><b>${tf}</b><p>ancora niente</p><i></i></div>`).join("")}</div></section>
+   <section class="blk"><div class="lab"><span>La mia lettura</span><span>${sesS==="fx"?(cF?esc(cF):"scegli una coppia"):"ultima nota per time frame"}</span></div><div class="mtf">${lt.map(({tf,n})=>n?`<div><b>${tf}</b><p title="${esc(n.txt)}">${esc(n.txt||"(solo immagine)")}${n.d!==sesD?` <em>· ${fmtD(n.d).slice(0,5)}</em>`:""}</p><i class="${n.bias||""}">${n.bias?BIAS[n.bias].slice(0,1):""}</i></div>`:`<div class="vuoto"><b>${tf}</b><p>ancora niente</p><i></i></div>`).join("")}</div></section>
    ${(()=>{const pt=pianoTable(T,sesS).with,ls=closedOf(T,sesS).filter(t=>t.less).slice(-1)[0];return pt.n||ls?`<section class="blk"><div class="lab"><span>Promemoria</span></div>${pt.n?`<div class="mini">Quando segui il piano: <b>${pt.wr.toFixed(0)} %</b> · R medio <b>${fR(pt.avgR)}</b> · ${pt.n} trade</div>`:""}${ls?`<p class="quote" style="font-size:13px;margin-top:10px">${esc(ls.less)}<small>${fmtD(ls.d)}</small></p>`:""}</section>`:""})()}
    <section class="blk"><div class="lab"><span>Trade del giorno</span><span>${tr.length||""}</span></div><div class="mini">${tr.length?tr.map(t=>`${esc(t.ora||"--:--")} · <b>${t.dir}</b> · ${t.open?"aperto":pct(t.res)}`).join("<br>"):"Nessun trade. Anche i giorni senza trade contano."}</div></section>
   </aside></div>${compositore()}`;
@@ -92,13 +101,14 @@ async function inviaC(){
   if(trade&&!c.salvato&&!oraM&&sesD!==TK){toast("Giorno passato: scrivi l'orario di entrata, tipo 9:15.");return}
   const ora=oraM||(sesD===TK?adesso():"");let rr=null;
   if(trade&&!c.salvato){rr=parseRR(c.rrTxt);if(Number.isNaN(rr)){toast("RR non valido: scrivilo tipo 1:2.");return}if(!num(c.risk)||c.risk<=0){toast("Manca il rischio.");return}}
+  if(trade&&!c.salvato&&sesS==="fx"&&!sesC){toast("Scegli la coppia in alto, o scrivine una nuova (es. EURUSD).");return}
   const salva=trade?saveT:saveN,lista=()=>trade?T:N;
   c.busy=true;redraw();
   try{
     if(!c.salvato){
       let riga;
-      if(trade){const [h,m]=(ora||"12:00").split(":").map(Number);riga={id:"n"+Date.now(),s:sesS,dir:c.dir,d:sesD,ora,ses:ora?sessFor(h+m/60):"",risk:+c.risk,check:STRAT[sesS].check.map(()=>0),conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr,pos:c.pos?nuovaPos(+c.risk):null,less:"",tv:"",imgs:[],open:true,why:txt};if(riga.pos){delete riga.pos.rr1Txt;delete riga.pos.r1Man}}
-      else{const base=c.edit?N.find(n=>n.id===c.edit):null;riga={id:base?base.id:"n"+Date.now(),s:base?base.s:sesS,d:base?base.d:sesD,ora:base?oraM:ora,tipo:fine?"fine":"nota",tf:fine?null:c.tf,bias:fine?null:c.bias,txt,imgs:(base?base.imgs:[]).filter(p=>!c.drop.includes(p)),sic:fine?c.sic:null,piano:fine?c.piano:null}}
+      if(trade){const [h,m]=(ora||"12:00").split(":").map(Number);riga={id:"n"+Date.now(),s:sesS,c:sesS==="fx"?sesC:"",dir:c.dir,d:sesD,ora,ses:ora?sessFor(h+m/60):"",risk:+c.risk,check:STRAT[sesS].check.map(()=>0),conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr,pos:c.pos?nuovaPos(+c.risk):null,less:"",tv:"",imgs:[],open:true,why:txt};if(riga.pos){delete riga.pos.rr1Txt;delete riga.pos.r1Man}}
+      else{const base=c.edit?N.find(n=>n.id===c.edit):null;riga={id:base?base.id:"n"+Date.now(),s:base?base.s:sesS,c:base?base.c||"":(sesS==="fx"&&!fine?sesC:""),d:base?base.d:sesD,ora:base?oraM:ora,tipo:fine?"fine":"nota",tf:fine?null:c.tf,bias:fine?null:c.bias,txt,imgs:(base?base.imgs:[]).filter(p=>!c.drop.includes(p)),sic:fine?c.sic:null,piano:fine?c.piano:null}}
       const sv=await salva(riga);if(!sv)return;
       c.salvato=sv.id;
       if(c.drop.length){const {error}=await sb.storage.from(BUCKET).remove(c.drop);if(!error)c.drop=[]}
@@ -128,7 +138,7 @@ function vCal(){
    <div class="cal">${["lun","mar","mer","gio","ven","sab","dom"].map(h=>`<div class="h">${h}</div>`).join("")}${cells}</div>
    <div class="note">Tocca un giorno: si apre il diario di quel giorno, anche per scriverlo dopo. Pallino grigio = note. Mese: ${ms.n} trade chiusi · win rate ${ms.n?ms.wr.toFixed(0)+" %":"—"} · ${pct(ms.sum)}.</div></section>
   <div class="col"><section class="blk"><div class="lab"><span>${calSel===TK?"Oggi":fmtD(calSel)}</span><button type="button" class="cta ghost sm" data-newday="${calSel}">+ trade</button></div>
-   <div class="trades">${L.length?L.map(t=>`<button type="button" class="tr" data-open="${t.id}"><span class="sym">${STRAT[t.s].sym}<small>${t.ora?esc(t.ora)+" · ":""}${t.dir}${t.ses?" · "+esc(t.ses):""}</small></span><span class="tags">${esc(t.why)||"—"}</span><span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}<span class="st">${t.open?"":t.piano===false?"fuori piano":"piano ok"} · ${nImg(t)} img</span></span></button>`).join(""):`<div class="note" style="margin:0">Nessun trade in questo giorno.</div>`}</div></section></div></div>`;
+   <div class="trades">${L.length?L.map(t=>`<button type="button" class="tr" data-open="${t.id}"><span class="sym">${esc(sim(t))}<small>${t.ora?esc(t.ora)+" · ":""}${t.dir}${t.ses?" · "+esc(t.ses):""}</small></span><span class="tags">${esc(t.why)||"—"}</span><span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}<span class="st">${t.open?"":t.piano===false?"fuori piano":"piano ok"} · ${nImg(t)} img</span></span></button>`).join(""):`<div class="note" style="margin:0">Nessun trade in questo giorno.</div>`}</div></section></div></div>`;
 }
 
 /* ===== ORA E SESSIONI (ora italiana) ===== */
@@ -144,23 +154,29 @@ try{tView=localStorage.getItem("journal-vista")||"grid"}catch(e){}
 function vTrades(){
   const L=T.slice().reverse().filter(t=>tFilt==="all"||t.s===tFilt);
   const body=!L.length?`<div class="empty"><b>Nessun trade.</b>Il primo lo registri dalla Sessione con "＋ Entro", oppure da "+ Nuovo trade".</div>`
-   :tView==="list"?`<div class="tlist">${L.map(t=>`<button type="button" class="tr" data-open="${t.id}">${firstImg(t,"thumb")}<span class="sym">${STRAT[t.s].sym}<small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""} · ${t.dir}</small></span><span class="tags">${esc(t.why)||"—"}</span><span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}<span class="st">${t.open?"":t.piano===false?"fuori piano":"piano ok"}</span></span></button>`).join("")}</div>`
-   :`<div class="tgrid">${L.map(t=>`<button type="button" class="tcard" data-open="${t.id}">${firstImg(t,"im").replace("</div>",`<span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}</span></div>`)}<div class="bd"><b>${STRAT[t.s].sym} · ${t.dir}</b><small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""}${t.ses?" · "+esc(t.ses):""}</small><small>${esc(t.why)||"—"}</small></div></button>`).join("")}</div>`;
+   :tView==="list"?`<div class="tlist">${L.map(t=>`<button type="button" class="tr" data-open="${t.id}">${firstImg(t,"thumb")}<span class="sym">${esc(sim(t))}<small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""} · ${t.dir}</small></span><span class="tags">${esc(t.why)||"—"}</span><span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}<span class="st">${t.open?"":t.piano===false?"fuori piano":"piano ok"}</span></span></button>`).join("")}</div>`
+   :`<div class="tgrid">${L.map(t=>`<button type="button" class="tcard" data-open="${t.id}">${firstImg(t,"im").replace("</div>",`<span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}</span></div>`)}<div class="bd"><b>${esc(sim(t))} · ${t.dir}</b><small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""}${t.ses?" · "+esc(t.ses):""}</small><small>${esc(t.why)||"—"}</small></div></button>`).join("")}</div>`;
   return`<div class="col enter"><div class="tools"><div class="seg"><button type="button" data-tf="all" class="${tFilt==="all"?"on":""}">Tutti</button><button type="button" data-tf="xau" class="${tFilt==="xau"?"on":""}">XAUUSD</button><button type="button" data-tf="fx" class="${tFilt==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${L.length} trade</span><div class="seg"><button type="button" data-tv="grid" class="${tView==="grid"?"on":""}">▦ Quadrotti</button><button type="button" data-tv="list" class="${tView==="list"?"on":""}">☰ Lista</button></div></div>${body}</div>`;
 }
 
 let stS="xau";
+let stC="";
 function vStats(){
+  const cS=stS==="fx"&&stC?stC:null,cL=stS==="fx"?coppie(N,T):[],ct=stS==="fx"&&!cS?coppiaTable(T):[];
+  return vStatsDi(...filtrati(cS),cS,cL,ct);
+}
+function vStatsDi(N,T,cS,cL,ct){
   const L=closedOf(T,stS),s=stats(L),cv=curve(L),al=allineamento(N,T,stS),sc=sicTable(N,T,stS),pt=pianoTable(T,stS),ac=accordo(N,T,stS),pz=pazienza(N,T,stS),pw=parole(N,T,stS),pr=prove(T,stS,6),co=costanza(N,T,stS,spostaGiorno(TK,-29),TK),fi=stS==="xau"?finestre(T):null;
   const wr=x=>x.n?x.wr.toFixed(0)+" %":"—",rm=x=>x.n?fR(x.avgR)+" R":"—";
   const due=(a,la,b,lb)=>`<div class="kpis"><div class="kpi ${a.n&&b.n&&a.wr>b.wr?"good":""}"><b>${wr(a)}</b><span>${la} · ${a.n} trade · ${rm(a)}</span></div><div class="kpi"><b>${wr(b)}</b><span>${lb} · ${b.n} trade · ${rm(b)}</span></div></div>`;
   const min=v=>v==null?"—":Math.round(v)+"′";
   return `<div class="col enter">
-   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="seg" style="width:260px"><button type="button" data-st="xau" class="${stS==="xau"?"on":""}">XAUUSD</button><button type="button" data-st="fx" class="${stS==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${s.n} trade chiusi · ${co.giorni} giorni di diario negli ultimi 30</span></div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="seg" style="width:260px"><button type="button" data-st="xau" class="${stS==="xau"?"on":""}">XAUUSD</button><button type="button" data-st="fx" class="${stS==="fx"?"on":""}">FOREX</button></div>${cL.length?`<div class="pairs" style="margin:0"><button type="button" class="chip ${cS?"":"on"}" data-stc="">tutte</button>${cL.map(c=>`<button type="button" class="chip ${c===cS?"on":""}" data-stc="${esc(c)}">${esc(c)}</button>`).join("")}</div>`:""}<span class="note" style="margin:0">${cS?esc(cS)+" · ":""}${s.n} trade chiusi · ${co.giorni} giorni di diario negli ultimi 30</span></div>
    <div class="grid g-stats">
     <section class="blk hi"><div class="lab"><span>Quando segui il piano</span><span>win rate · R medio</span></div>${pt.with.n+pt.without.n?due(pt.with,"da piano",pt.without,"fuori piano")+`<div class="note">${pt.with.n&&pt.without.n?(pt.with.wr>=pt.without.wr?"Il piano ti dà ragione: i numeri migliori arrivano quando fai il tuo.":"Per ora fuori piano va meglio: è un segnale da guardare con Sara, non da ignorare."):"Servono trade dentro e fuori piano per il confronto."}</div>`:`<div class="empty">Compare con i primi trade chiusi: alla chiusura segni se hai seguito il piano.</div>`}</section>
     <section class="blk"><div class="lab"><span>Tutti i time frame d'accordo</span><span>almeno 2 letture con bias</span></div>${ac.with.n+ac.without.n?due(ac.with,"tutti d'accordo",ac.without,"letture miste")+`<div class="note">Conta le letture rialzo/ribasso valide al momento dell'entrata.</div>`:`<div class="empty">Compare quando entri dopo aver scritto il bias su almeno due time frame.</div>`}</section>
    </div>
+   ${ct.length?`<section class="blk"><div class="lab"><span>Le tue coppie</span><span>win rate · R medio · da piano</span></div><div class="hbars">${ct.map(x=>`<div class="hb ${x.wr>=55?"good":x.wr<45?"bad":""}"><span>${esc(x.k)}<small>${x.n} trade</small></span><div class="track"><i style="width:${Math.max(2,x.wr)}%"></i></div><b>${x.wr.toFixed(0)} %</b><em class="hbx">${fR(x.avgR)} R · piano ${x.daPiano}/${x.n}</em></div>`).join("")}</div><div class="note">Tocca una coppia in alto: tutte le statistiche qui sotto (piano, bias dei time frame, parole, pazienza) diventano solo di quella coppia.</div></section>`:""}
    <div class="grid g-stats">
     <section class="blk"><div class="lab"><span>Ogni time frame: trade a favore del bias</span><span>barra = a favore · tacca = contro</span></div>
      ${al.length?`<div class="hbars">${al.map(hbar).join("")}</div><div class="note">Per ogni trade chiuso conta l'ultima lettura scritta prima di entrare, con l'orario (Weekly valida 7 giorni, Daily 3, gli altri il giorno stesso); se è neutra il trade non conta. Il numero piccolo è quanti trade a favore.</div>`:`<div class="empty">Compare quando ci sono trade chiusi e, prima, note con il bias segnato.</div>`}</section>
@@ -194,7 +210,7 @@ function openNew(dateKey,id,mode){
   const t=id?T.find(x=>x.id===id):null;
   const nowH=today.getHours()+today.getMinutes()/60;
   const dd=dateKey||TK,oggi=dd===TK;
-  F=t?JSON.parse(JSON.stringify(t)):{s:sesS,dir:"long",d:dd,ora:oggi?adesso():"",ses:oggi?sessFor(nowH):"",risk:STRAT[sesS].risk,check:STRAT[sesS].check.map(()=>0),why:"",conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr:null,pos:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
+  F=t?JSON.parse(JSON.stringify(t)):{s:sesS,dir:"long",d:dd,ora:oggi?adesso():"",ses:oggi?sessFor(nowH):"",c:sesS==="fx"?sesC:"",risk:STRAT[sesS].risk,check:STRAT[sesS].check.map(()=>0),why:"",conf:[],prima:null,dopo:null,piano:null,res:null,r:null,rr:null,pos:null,less:"",tv:"",imgs:[],open:true,id:"n"+Date.now()};
   if(!t&&sesS==="fx")F.pos=nuovaPos(F.risk);F.mode=t?(mode||(t.open?"close":"edit")):"new";F.rrTxt=fmtRR(F.rr);if(F.pos){F.pos.rr1Txt=fmtRR(F.pos.rr1);F.pos.r1Man=true}F.out=F.mode==="close"?null:tipoEsito(F.res,F.risk,F.rr);F.pending=[];F.drop=[];F.confirmDel=false;
   renderSheet();$("sheet").scrollTop=0;
 }
@@ -208,12 +224,13 @@ function renderSheet(){
   const imgs=F.imgs.filter(p=>!F.drop.includes(p));
   const thumbs=[...imgs.map(p=>`<div><img alt="" data-path="${esc(p)}"><button type="button" data-rmimg="${esc(p)}" aria-label="Togli">×</button></div>`),...F.pending.map((b,i)=>`<div><img alt="" src="${b.url}"><button type="button" data-rmpend="${i}" aria-label="Togli">×</button></div>`)];
   const summary=`<div class="card"><h4>Il trade in sintesi</h4><div class="sum">
-    <div><span>strumento</span><b>${st.sym} · ${F.dir}</b></div><div><span>quando</span><b>${fmtD(F.d)}${F.ora?" · "+esc(F.ora):""}</b></div><div><span>sessione</span><b>${esc(F.ses||"—")}</b></div><div><span>rischio</span><b>${F.risk==null?"—":String(F.risk).replace(".",",")+" %"}${rrTesto({pos:F.pos,rr:num(F.rr)?F.rr:null})?" · "+rrTesto({pos:F.pos,rr:num(F.rr)?F.rr:null}):""}</b></div>
+    <div><span>strumento</span><b>${F.s==="fx"&&normCoppia(F.c)?esc(normCoppia(F.c)):st.sym} · ${F.dir}</b></div><div><span>quando</span><b>${fmtD(F.d)}${F.ora?" · "+esc(F.ora):""}</b></div><div><span>sessione</span><b>${esc(F.ses||"—")}</b></div><div><span>rischio</span><b>${F.risk==null?"—":String(F.risk).replace(".",",")+" %"}${rrTesto({pos:F.pos,rr:num(F.rr)?F.rr:null})?" · "+rrTesto({pos:F.pos,rr:num(F.rr)?F.rr:null}):""}</b></div>
     <div><span>perché entro</span><b>${(F.why||"").trim()?"scritto":"—"}</b></div><div><span>immagini</span><b>${(imgs.length+F.pending.length+(F.tv?1:0))||"—"}</b></div>
     <div><span>prima</span><b>${esc(F.prima||"—")}</b></div>${M!=="new"?`<div><span>esito</span><b class="${F.res>0?"ok":F.res<0?"no":""}">${F.res==null?"—":pct(F.res)}</b></div>`:""}
    </div></div>`;
   const setup=`<section class="card"><h4><i>1</i>Cosa</h4>
      <div class="row2" style="margin-bottom:12px"><label class="fl">strategia<div class="big2"><button type="button" data-fs="xau" class="${F.s==="xau"?"on":""}">XAUUSD</button><button type="button" data-fs="fx" class="${F.s==="fx"?"on":""}">FOREX</button></div></label><label class="fl">direzione<div class="big2"><button type="button" data-fd="long" class="long ${F.dir==="long"?"on":""}">▲ long</button><button type="button" data-fd="short" class="short ${F.dir==="short"?"on":""}">▼ short</button></div></label></div>
+     ${F.s==="fx"?`<label class="fl" style="margin-bottom:12px">coppia<input type="text" autocomplete="off" autocapitalize="characters" list="pairList" value="${esc(F.c||"")}" data-ff="c" placeholder="es. EURUSD"><datalist id="pairList">${coppie(N,T).map(c=>`<option value="${esc(c)}">`).join("")}</datalist></label>`:""}
      <div class="row3"><label class="fl">data<input type="date" value="${F.d}" data-ff="d"></label><label class="fl">orario di entrata<input type="text" inputmode="numeric" autocomplete="off" placeholder="es. 9:15" value="${esc(F.ora||"")}" data-ff="ora" class="${Number.isNaN(parseOra(F.ora))?"bad":""}"></label><label class="fl">rischio sul conto, %<input type="number" step="0.1" value="${F.risk==null?"":F.risk}" data-ff="risk"></label></div>
      <label class="fl" style="margin-top:12px">posizioni<div class="big2"><button type="button" data-fpos="1" class="${F.pos?"":"on"}">posizione unica</button><button type="button" data-fpos="2" class="${F.pos?"on":""}">due posizioni · TP1 + TP</button></div></label>
      ${F.pos?`<div class="row3" style="margin-top:12px"><label class="fl">pos. 1 · rischio %<input type="number" step="0.1" value="${F.pos.r1==null?"":F.pos.r1}" data-ff="p1r" class="${p1ok?"":"bad"}"></label><label class="fl">pos. 1 · RR<input type="text" inputmode="decimal" autocomplete="off" value="${esc(F.pos.rr1Txt||"")}" data-ff="p1rr" placeholder="1:1" class="${Number.isNaN(F.pos.rr1)?"bad":""}"></label><label class="fl">TP1, %<input type="text" readonly tabindex="-1" class="calc ok" value="${lv2.tp1==null?"—":pct(lv2.tp1)}" data-calc="tp1"></label></div>
@@ -240,6 +257,7 @@ function addPending(file){if(!F||!/^image\//.test(file.type))return;F.pending.pu
 async function commitSheet(){
   if(saving)return;const M=F.mode;
   {const o=parseOra(F.ora);if(Number.isNaN(o)){toast("Orario non valido: scrivilo tipo 9:15.");return}F.ora=o}
+  F.c=F.s==="fx"?normCoppia(F.c):"";
   if(Number.isNaN(F.rr)||(F.pos&&Number.isNaN(F.pos.rr1))){toast("RR non valido: scrivilo tipo 1:2.");return}
   if(F.pos&&!(num(F.pos.r1)&&num(F.risk)&&F.pos.r1>0&&F.pos.r1<F.risk)){toast("Il rischio della posizione 1 deve stare tra 0 e il totale.");return}
   if((M==="close"||(M==="edit"&&!F.open))&&(F.res==null||isNaN(F.res))){toast("Manca l'esito: TP, SL, pareggio o altro.");return}
@@ -279,6 +297,7 @@ document.addEventListener("click",async e=>{
   const cal=q("[data-cal]");if(cal){calSel=cal.dataset.cal;sesD=calSel;resetC();location.hash="#sessione";return}
   if(inSess()&&!F&&C.busy&&q("#view button"))return;
   if(inSess()&&!F){
+   const pc=q("[data-pc]");if(pc){setC(pc.dataset.pc);redraw();return}
    const sm=q("[data-sm]");if(sm){sesS=sm.dataset.sm;resetC();C.tf=TFS[sesS][0];redraw();return}
    const dg=q("[data-dg]");if(dg){sesD=+dg.dataset.dg===0?TK:spostaGiorno(sesD,+dg.dataset.dg);resetC();redraw();return}
    const ctf=q("[data-ctf]");if(ctf){C.tf=ctf.dataset.ctf;redraw(true);return}
@@ -298,6 +317,7 @@ document.addEventListener("click",async e=>{
   if(q("[data-exp]")){await esporta();return}
   const mv=q("[data-mv]");if(mv){calM.setMonth(calM.getMonth()+ +mv.dataset.mv);route();return}
   const st=q("[data-st]");if(st){stS=st.dataset.st;route();return}
+  const stc=q("[data-stc]");if(stc){stC=stc.dataset.stc;route();return}
   const tv=q("[data-tv]");if(tv){tView=tv.dataset.tv;try{localStorage.setItem("journal-vista",tView)}catch(x){}route();return}
   const tf=q("[data-tf]");if(tf){tFilt=tf.dataset.tf;route();return}
   if(!F)return;
@@ -320,11 +340,12 @@ document.addEventListener("click",async e=>{
   if(q("#cancelSheet")||q("#cancelSheet2")||e.target.id==="sheet"){closeSheet();return}
   if(q("#saveSheet")){await commitSheet();return}
 });
-document.addEventListener("change",e=>{if(e.target.id==="fileIn"&&F){[...e.target.files].forEach(addPending)}if(e.target.id==="sesDate"&&e.target.value){sesD=e.target.value;resetC();redraw()}});
+document.addEventListener("change",e=>{if(e.target.id==="fileIn"&&F){[...e.target.files].forEach(addPending)}if(e.target.id==="newPair"&&e.target.isConnected){nuovaCoppia(e.target);return}if(e.target.id==="sesDate"&&e.target.value){sesD=e.target.value;resetC();redraw()}});
 document.addEventListener("input",e=>{const g=e.target;if(g.id==="cTxt"){C.txt=g.value;return}if(g.hasAttribute("data-cora")){C.ora=g.value;return}if(g.hasAttribute("data-crisk")){C.risk=g.value===""?null:+g.value;return}if(g.hasAttribute("data-crr")){C.rrTxt=g.value;return}
   if(!F)return;const f=e.target.dataset.ff;if(!f)return;const v=e.target.value;if(f==="res"||f==="r"||f==="risk")F[f]=v===""?null:+v;else F[f]=v;if(f==="rrTxt")F.rr=parseRR(v);if(f==="res"&&!F.pos)F.r=rDaEsito(F.res,F.risk);if(F.pos){if(f==="p1r"){F.pos.r1=v===""?null:+v;F.pos.r1Man=true}if(f==="p1rr"){F.pos.rr1Txt=v;F.pos.rr1=parseRR(v)}if(f==="p2res")F.pos.res2=v===""?null:+v;if(f==="risk"&&!F.pos.r1Man)F.pos.r1=meta(F.risk);ricalcola()}
   else if((f==="risk"||f==="rrTxt")&&F.out&&F.out!=="altro"){const x=esitoDa(F.out,F.risk,num(F.rr)?F.rr:null);if(x){F.res=x.res;F.r=x.r}else{F.res=null;F.r=null}}if(f==="risk"&&!F.pos&&F.out==="altro")F.r=rDaEsito(F.res,F.risk);if(f==="ora"){const o=parseOra(v);if(o){const [h,m]=o.split(":").map(Number);F.ses=sessFor(h+m/60)}}if(f==="less"||f==="why")return;const sel=document.activeElement,id=sel&&sel.dataset.ff;renderSheet();if(id){const el=document.querySelector(`[data-ff="${id}"]`);if(el){el.focus();if(el.type==="text"||el.type==="number")try{el.setSelectionRange(el.value.length,el.value.length)}catch(x){}}}});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheet();$("pop").hidden=true}if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)&&e.target.id==="cTxt"){e.preventDefault();inviaC()}});
+function nuovaCoppia(g){const c=normCoppia(g.value);if(c.length<3){if(g.value.trim())toast("Coppia non valida: scrivila tipo EURUSD.");return}setC(c);redraw(true)}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="newPair"){e.preventDefault();nuovaCoppia(e.target);return}if(e.key==="Escape"){closeSheet();$("pop").hidden=true}if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)&&e.target.id==="cTxt"){e.preventDefault();inviaC()}});
 document.addEventListener("paste",e=>{if(!F&&inSess()){const it=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file"&&/^image\//.test(i.type));if(it.length){e.preventDefault();it.forEach(i=>addC(i.getAsFile()))}return}
   if(!F||F.mode==="close")return;const items=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file"&&/^image\//.test(i.type));if(items.length){e.preventDefault();items.forEach(i=>addPending(i.getAsFile()));toast("Screenshot aggiunto.")}});
 document.addEventListener("dragover",e=>{if(F||inSess()){e.preventDefault()}});

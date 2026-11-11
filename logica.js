@@ -21,8 +21,12 @@ const mm=h=>pad(Math.floor(h))+":"+pad(Math.round((h%1)*60));
 function sessState(h){return SESS.map(([n,a,b])=>({n,a,b,on:a<b?(h>=a&&h<b):(h>=a||h<b)}))}
 
 /* Conversione riga Supabase <-> trade in memoria */
-function rowToT(r){return{id:r.id,why:r.motivo||"",s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,rr:r.rr==null?null:+r.rr,pos:posDaRiga(r.posizioni),less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
-function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,rr:t.rr==null?null:+t.rr,posizioni:posInRiga(t.pos),lezione:t.less||"",motivo:t.why||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
+/* coppia del Forex (Lore, 2026-11-11): "eur/usd" → "EURUSD" */
+const normCoppia=v=>String(v==null?"":v).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10);
+/* una nota vale per una coppia se è di quella coppia o se non ne ha (nota generale); c null = nessun filtro */
+const delC=(n,c)=>c==null||!n.c||n.c===c;
+function rowToT(r){return{id:r.id,c:normCoppia(r.coppia),why:r.motivo||"",s:r.strategia,dir:r.direzione,d:r.data,ora:r.ora||"",ses:r.sessione||"",risk:r.rischio==null?null:+r.rischio,check:(r.checklist||[]).map(Number),conf:r.confluenze||[],prima:r.stato_prima||null,dopo:r.stato_dopo||null,piano:r.piano,res:r.esito_pct==null?null:+r.esito_pct,r:r.r==null?null:+r.r,rr:r.rr==null?null:+r.rr,pos:posDaRiga(r.posizioni),less:r.lezione||"",tv:r.tv_link||"",imgs:r.immagini||[],open:!!r.aperto}}
+function tToRow(t){const o={strategia:t.s,direzione:t.dir,data:t.d,ora:t.ora||null,sessione:t.ses||null,rischio:t.risk==null?null:+t.risk,checklist:(t.check||[]).map(x=>x?1:0),confluenze:t.conf||[],stato_prima:t.prima||null,stato_dopo:t.dopo||null,piano:t.piano==null?null:!!t.piano,esito_pct:t.res==null?null:+t.res,r:t.r==null?null:+t.r,rr:t.rr==null?null:+t.rr,posizioni:posInRiga(t.pos),lezione:t.less||"",motivo:t.why||"",tv_link:t.tv||"",immagini:t.imgs||[],aperto:!!t.open};if(t.s==="fx")o.coppia=normCoppia(t.c)||null;if(t.id&&!String(t.id).startsWith("n"))o.id=t.id;return o}
 function sortT(T){return T.sort((a,b)=>(a.d+(a.ora||""))<(b.d+(b.ora||""))?-1:(a.d+(a.ora||""))>(b.d+(b.ora||""))?1:0)}
 
 /* RR e livelli (Lore, 2026-11-09): l'RR si scrive 1:2; SL e TP in % vengono dal rischio */
@@ -62,8 +66,8 @@ function weekOf(T,today){const mon=new Date(today);mon.setDate(mon.getDate()-((m
 /* Diario di sessione (Lore, 2026-11-11): note libere per time frame, con screenshot. Oro da W a M5, Forex da W a H1 */
 const TFS={xau:["W","D","H4","H1","M15","M5"],fx:["W","D","H4","H1"]};
 const BIAS={up:"↑ rialzo",dn:"↓ ribasso",nt:"↔ neutro"};
-function rowToN(r){return{id:r.id,s:r.strategia,d:r.data,ora:r.ora||"",tf:r.tf||null,bias:r.bias||null,txt:r.testo||"",imgs:r.immagini||[],tipo:r.tipo||"nota",sic:r.sicurezza==null?null:+r.sicurezza,piano:r.piano==null?null:!!r.piano}}
-function nToRow(n){const o={strategia:n.s,data:n.d,ora:n.ora||null,tf:n.tf||null,bias:n.bias||null,testo:n.txt||"",immagini:n.imgs||[],tipo:n.tipo||"nota",sicurezza:n.sic==null?null:+n.sic,piano:n.piano==null?null:!!n.piano};if(n.id&&!String(n.id).startsWith("n"))o.id=n.id;return o}
+function rowToN(r){return{id:r.id,c:normCoppia(r.coppia),s:r.strategia,d:r.data,ora:r.ora||"",tf:r.tf||null,bias:r.bias||null,txt:r.testo||"",imgs:r.immagini||[],tipo:r.tipo||"nota",sic:r.sicurezza==null?null:+r.sicurezza,piano:r.piano==null?null:!!r.piano}}
+function nToRow(n){const o={strategia:n.s,data:n.d,ora:n.ora||null,tf:n.tf||null,bias:n.bias||null,testo:n.txt||"",immagini:n.imgs||[],tipo:n.tipo||"nota",sicurezza:n.sic==null?null:+n.sic,piano:n.piano==null?null:!!n.piano};if(n.s==="fx")o.coppia=normCoppia(n.c)||null;if(n.id&&!String(n.id).startsWith("n"))o.id=n.id;return o}
 const kOra=x=>x.ora||"99:99";
 /* orario scritto a mano: "9" "915" "9:15" "9.15" "09,15" → "09:15"; vuoto → ""; sbagliato → NaN */
 function parseOra(v){const t=String(v==null?"":v).trim();if(!t)return"";let h,m;const a=/^(\d{1,2})(?:[:.,h ](\d{1,2}))?$/.exec(t),b=/^(\d{1,2})(\d{2})$/.exec(t);if(a){h=+a[1];m=a[2]==null?0:+a[2]}else if(b){h=+b[1];m=+b[2]}else return NaN;return h<24&&m<60?pad(h)+":"+pad(m):NaN}
@@ -75,27 +79,27 @@ const VALE={W:6,D:2};
 /* con un orario: nello stesso giorno contano solo le note con un orario non successivo */
 function prima(n,d,ora){return n.d<d||(n.d===d&&(!ora||(!!n.ora&&n.ora<=ora)))}
 /* l'ultima lettura di ogni time frame valida per quel giorno (e quell'ora) */
-function lettura(N,s,d,ora){return TFS[s].map(tf=>{const L=N.filter(n=>n.s===s&&n.tf===tf&&n.tipo!=="fine"&&prima(n,d,ora)&&giorni(n.d,d)<=(VALE[tf]||0)).sort((a,b)=>(a.d+kOra(a))<(b.d+kOra(b))?-1:1);return{tf,n:L[L.length-1]||null}})}
+function lettura(N,s,d,ora,c){return TFS[s].map(tf=>{const L=N.filter(n=>n.s===s&&delC(n,c)&&n.tf===tf&&n.tipo!=="fine"&&prima(n,d,ora)&&giorni(n.d,d)<=(VALE[tf]||0)).sort((a,b)=>(a.d+kOra(a))<(b.d+kOra(b))?-1:1);return{tf,n:L[L.length-1]||null}})}
 /* trade a favore o contro il bias di ogni time frame (solo bias rialzo/ribasso) */
-function allineamento(N,T,s){const L=closedOf(T,s);return TFS[s].map(tf=>{const con=[];L.forEach(t=>{const l=lettura(N,s,t.d,t.ora).find(x=>x.tf===tf).n;if(l&&(l.bias==="up"||l.bias==="dn"))con.push({...t,_a:(l.bias==="up")===(t.dir==="long")})});return{k:tf,...splitBy(con,t=>t._a)}}).filter(x=>x.with.n+x.without.n>0)}
+function allineamento(N,T,s){const L=closedOf(T,s);return TFS[s].map(tf=>{const con=[];L.forEach(t=>{const l=lettura(N,s,t.d,t.ora,t.c||"").find(x=>x.tf===tf).n;if(l&&(l.bias==="up"||l.bias==="dn"))con.push({...t,_a:(l.bias==="up")===(t.dir==="long")})});return{k:tf,...splitBy(con,t=>t._a)}}).filter(x=>x.with.n+x.without.n>0)}
 /* sicurezza di fine sessione (1-5) e trade di quel giorno */
 function sicTable(N,T,s){const L=closedOf(T,s);return[1,2,3,4,5].map(k=>{const D=new Set(N.filter(n=>n.s===s&&n.tipo==="fine"&&n.sic===k).map(n=>n.d));return{k,giorni:D.size,...stats(L.filter(t=>D.has(t.d)))}}).filter(x=>x.giorni)}
 /* testo per Sara: il diario di un periodo, con i link alle immagini */
 function esportaMd(N,T,s,da,a,url){const u=p=>url&&url[p]?url[p]:p;const D=[...new Set([...N,...T].filter(x=>x.s===s&&x.d>=da&&x.d<=a).map(x=>x.d))].sort();let o="# Diario "+STRAT[s].n+" · "+fmtD(da)+" - "+fmtD(a)+"\n";
  D.forEach(d=>{o+="\n## "+fmtD(d)+"\n";flusso(N,T,s,d).forEach(({k,x})=>{const im=(x.imgs||[]).map(p=>"\n  ![]("+u(p)+")").join("");
-  if(k==="nota")o+="\n- "+(x.ora||"--:--")+" · "+(x.tf||"nota")+(x.bias?" · "+BIAS[x.bias]:"")+": "+x.txt.replace(/\n/g," / ")+im;
+  if(k==="nota")o+="\n- "+(x.ora||"--:--")+" · "+(x.c?x.c+" · ":"")+(x.tf||"nota")+(x.bias?" · "+BIAS[x.bias]:"")+": "+x.txt.replace(/\n/g," / ")+im;
   else if(k==="fine")o+="\n- FINE SESSIONE · sicurezza "+(x.sic==null?"-":x.sic+"/5")+" · piano "+(x.piano==null?"-":x.piano?"sì":"no")+": "+x.txt.replace(/\n/g," / ");
-  else o+="\n- "+(x.ora||"--:--")+" · TRADE "+x.dir+" · rischio "+(x.risk==null?"-":x.risk+" %")+(x.rr?" · RR "+fmtRR(x.rr):"")+(x.pos?" · 2 posizioni":"")+" · "+(x.open?"aperto":"esito "+pct(x.res)+(x.r==null?"":" · "+x.r+" R")+" · piano "+(x.piano===false?"no":"sì"))+(x.why?"\n  perché: "+x.why.replace(/\n/g," / "):"")+(x.less?"\n  lezione: "+x.less.replace(/\n/g," / "):"")+(x.tv?"\n  ![]("+tvImg(x.tv)+")":"")+im})
+  else o+="\n- "+(x.ora||"--:--")+" · TRADE "+(x.c?x.c+" ":"")+x.dir+" · rischio "+(x.risk==null?"-":x.risk+" %")+(x.rr?" · RR "+fmtRR(x.rr):"")+(x.pos?" · 2 posizioni":"")+" · "+(x.open?"aperto":"esito "+pct(x.res)+(x.r==null?"":" · "+x.r+" R")+" · piano "+(x.piano===false?"no":"sì"))+(x.why?"\n  perché: "+x.why.replace(/\n/g," / "):"")+(x.less?"\n  lezione: "+x.less.replace(/\n/g," / "):"")+(x.tv?"\n  ![]("+tvImg(x.tv)+")":"")+im})
   o+="\n"});return o}
 
 /* Statistiche del diario (Lore, 2026-11-11): sul processo, non sul risultato */
 const pianoTable=(T,s)=>splitBy(closedOf(T,s),t=>t.piano!==false);
 /* tutti i time frame con un bias (rialzo/ribasso) d'accordo con il trade, contro letture miste; servono almeno 2 letture */
-function accordo(N,T,s){const L=[];closedOf(T,s).forEach(t=>{const b=lettura(N,s,t.d,t.ora).map(x=>x.n).filter(n=>n&&(n.bias==="up"||n.bias==="dn"));if(b.length<2)return;L.push({...t,_ok:b.every(n=>(n.bias==="up")===(t.dir==="long"))})});return splitBy(L,t=>t._ok)}
+function accordo(N,T,s){const L=[];closedOf(T,s).forEach(t=>{const b=lettura(N,s,t.d,t.ora,t.c||"").map(x=>x.n).filter(n=>n&&(n.bias==="up"||n.bias==="dn"));if(b.length<2)return;L.push({...t,_ok:b.every(n=>(n.bias==="up")===(t.dir==="long"))})});return splitBy(L,t=>t._ok)}
 const minuti=o=>{const[h,m]=String(o).split(":").map(Number);return h*60+m};
 const mediana=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y),k=b.length>>1;return b.length%2?b[k]:(b[k-1]+b[k])/2};
 /* pazienza: minuti tra la prima nota del giorno e l'entrata */
-function pazienza(N,T,s){const v=[],p=[];closedOf(T,s).forEach(t=>{if(!t.ora)return;const f=N.filter(n=>n.s===s&&n.d===t.d&&n.tipo!=="fine"&&n.ora&&n.ora<=t.ora).map(n=>minuti(n.ora));if(!f.length)return;const m=minuti(t.ora)-Math.min(...f);(t.res>0?v:p).push(m)});return{vinti:mediana(v),persi:mediana(p),nV:v.length,nP:p.length}}
+function pazienza(N,T,s){const v=[],p=[];closedOf(T,s).forEach(t=>{if(!t.ora)return;const f=N.filter(n=>n.s===s&&delC(n,t.c||"")&&n.d===t.d&&n.tipo!=="fine"&&n.ora&&n.ora<=t.ora).map(n=>minuti(n.ora));if(!f.length)return;const m=minuti(t.ora)-Math.min(...f);(t.res>0?v:p).push(m)});return{vinti:mediana(v),persi:mediana(p),nV:v.length,nP:p.length}}
 /* finestre di Lore sull'oro: 8:00-10:30 e 16:30-19:00 */
 const inFinestra=o=>{const h=minuti(o)/60;return(h>=8&&h<10.5)||(h>=16.5&&h<19)};
 const finestre=T=>splitBy(closedOf(T,"xau").filter(t=>t.ora),t=>inFinestra(t.ora));
@@ -107,12 +111,18 @@ const PAROLE={
  fx:[["AOI, area di interesse",["aoi","area di interesse","area of interest"]],["livello psicologico",["psicologic"]],["supporto o resistenza",["supporto","resistenz"]],["evidence",["evidence","evidenz"]],["engulfing",["engulfing"]],["fallimento e rottura",["fallimento+rottura"]],["testa e spalle",["testa e spalle"]],["time frame allineati",["allineat","in linea"]],["candela di rifiuto",["rifiut"]],["retest",["retest","ritest"]],["Fibonacci, golden zone",["fibo","golden"]]]};
 const haParola=(txt,alt)=>alt.some(a=>a.split("+").every(w=>txt.includes(w.toLowerCase())));
 /* il testo di un trade: il "perché entro" più le note dello stesso giorno scritte prima dell'entrata */
-const testoTrade=(N,t)=>[t.why||"",...N.filter(n=>n.s===t.s&&n.d===t.d&&n.tipo!=="fine"&&(!t.ora||!n.ora||n.ora<=t.ora)).map(n=>n.txt||"")].join(" ").toLowerCase();
+const testoTrade=(N,t)=>[t.why||"",...N.filter(n=>n.s===t.s&&delC(n,t.c||"")&&n.d===t.d&&n.tipo!=="fine"&&(!t.ora||!n.ora||n.ora<=t.ora)).map(n=>n.txt||"")].join(" ").toLowerCase();
 function parole(N,T,s){const L=closedOf(T,s).map(t=>({...t,_txt:testoTrade(N,t)}));return PAROLE[s].map(([k,alt])=>({k,...splitBy(L,t=>haParola(t._txt,alt))})).filter(x=>x.with.n>0).sort((a,b)=>b.with.wr-a.with.wr)}
 /* quando fai il tuo: trade da piano andati a segno, i più recenti */
 const prove=(T,s,n)=>closedOf(T,s).filter(t=>t.piano!==false&&t.res>0).slice(-(n||6)).reverse();
+/* le coppie usate sul Forex, dalla più frequente */
+function coppie(N,T){const k={};[...N,...T].forEach(x=>{if(x.s==="fx"&&x.c)k[x.c]=(k[x.c]||0)+1});return Object.keys(k).sort((a,b)=>k[b]-k[a]||(a<b?-1:1))}
+/* risultati per coppia: trade chiusi del Forex, con quanti da piano */
+function coppiaTable(T){const g={};closedOf(T,"fx").forEach(t=>{(g[t.c||""]=g[t.c||""]||[]).push(t)});return Object.keys(g).map(k=>({k:k||"senza coppia",...stats(g[k]),daPiano:g[k].filter(t=>t.piano!==false).length})).sort((a,b)=>b.n-a.n||(a.k<b.k?-1:1))}
+/* note e trade di una sola coppia del Forex (le note generali restano); c null = tutto */
+function filtraC(N,T,c){return c==null?[N,T]:[N.filter(n=>n.s!=="fx"||delC(n,c)),T.filter(t=>t.s!=="fx"||t.c===c)]}
 const conChecklist=(T,s)=>closedOf(T,s).filter(t=>(t.check||[]).some(Boolean)).length;
 
-const L={parseOra,pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+const L={normCoppia,coppie,coppiaTable,filtraC,parseOra,pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);

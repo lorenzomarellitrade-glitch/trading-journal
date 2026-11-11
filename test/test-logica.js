@@ -125,4 +125,21 @@ ok("finestre: solo oro e con orario",L.finestre([t({ora:"09:00",res:1}),t({ora:"
 ok("checklist: conta solo i trade con almeno una spunta",L.conChecklist([t({check:[0,0,0,0,0]}),t({check:[1,0,0,0,0]})],"xau")===1);
 ok("orario a mano: 9, 915, 9:15, 9.15, 21h30",L.parseOra("9")==="09:00"&&L.parseOra("915")==="09:15"&&L.parseOra("9:15")==="09:15"&&L.parseOra("9.15")==="09:15"&&L.parseOra("21h30")==="21:30"&&L.parseOra("16:5")==="16:05");
 ok("orario a mano: vuoto e sbagliati",L.parseOra("")===""&&Number.isNaN(L.parseOra("25"))&&Number.isNaN(L.parseOra("9:70"))&&Number.isNaN(L.parseOra("ciao")));
+// ---- coppia del forex
+ok("coppia: normalizza",L.normCoppia("eur/usd")==="EURUSD"&&L.normCoppia(" gbp jpy ")==="GBPJPY"&&L.normCoppia(null)==="");
+{const r=L.tToRow({s:"fx",c:"eur/usd",dir:"long",d:"2026-11-10"}),x=L.tToRow({s:"xau",c:"",dir:"long",d:"2026-11-10"});
+ ok("coppia: nella riga solo sul forex",r.coppia==="EURUSD"&&!("coppia" in x)&&L.rowToT({strategia:"fx",coppia:"EURUSD"}).c==="EURUSD"&&L.rowToT({strategia:"xau"}).c==="");
+ ok("coppia: forex senza coppia = null",L.tToRow({s:"fx",dir:"long",d:"2026-11-10"}).coppia===null&&L.nToRow({s:"fx",c:"usdjpy",d:"2026-11-10"}).coppia==="USDJPY"&&!("coppia" in L.nToRow({s:"xau",d:"2026-11-10"})));}
+{const NN=[{s:"fx",c:"EURUSD",d:"2026-11-10",ora:"08:00",tf:"D",bias:"up",txt:"aoi eur",tipo:"nota"},{s:"fx",c:"GBPJPY",d:"2026-11-10",ora:"08:10",tf:"D",bias:"dn",txt:"engulfing gbp",tipo:"nota"},{s:"fx",c:"",d:"2026-11-10",ora:"08:20",tf:"W",bias:"up",txt:"generale",tipo:"nota"}];
+ const TT=[{s:"fx",c:"EURUSD",d:"2026-11-10",ora:"09:00",dir:"long",res:2,r:2,piano:true,open:false,why:""},{s:"fx",c:"GBPJPY",d:"2026-11-10",ora:"09:30",dir:"long",res:-1,r:-1,piano:false,open:false,why:""},{s:"fx",c:"EURUSD",d:"2026-11-09",ora:"09:00",dir:"short",res:-1,r:-1,piano:true,open:false,why:""}];
+ const d=tf=>c=>L.lettura(NN,"fx","2026-11-10",undefined,c).find(x=>x.tf===tf).n;
+ ok("coppia: lettura della sola coppia, la nota generale vale per tutte",d("D")("EURUSD").txt==="aoi eur"&&d("D")("GBPJPY").txt==="engulfing gbp"&&d("W")("EURUSD").txt==="generale"&&d("D")(null).txt==="engulfing gbp");
+ const al=L.allineamento(NN,TT,"fx").find(x=>x.k==="D");
+ ok("coppia: bias confrontato con la nota della stessa coppia",al.with.n===1&&al.without.n===1,JSON.stringify(al));
+ ok("coppia: testo del trade solo dalle note della sua coppia",/aoi eur/.test(L.testoTrade(NN,TT[0]))&&!/engulfing/.test(L.testoTrade(NN,TT[0]))&&/generale/.test(L.testoTrade(NN,TT[0])));
+ const ct=L.coppiaTable(TT);
+ ok("coppia: tabella per coppia",ct.length===2&&ct[0].k==="EURUSD"&&ct[0].n===2&&ct[0].wr===50&&ct[0].daPiano===2&&ct[1].k==="GBPJPY"&&ct[1].daPiano===0,JSON.stringify(ct));
+ ok("coppia: elenco dalla più usata",L.coppie(NN,TT).join()==="EURUSD,GBPJPY");
+ const [n2,t2]=L.filtraC(NN,TT,"GBPJPY");ok("coppia: filtro tiene la coppia e le note generali",t2.length===1&&n2.length===2&&L.filtraC(NN,TT,null)[1].length===3);
+ ok("coppia: nel file per Sara",/TRADE EURUSD long/.test(L.esportaMd(NN,TT,"fx","2026-11-01","2026-11-30"))&&/GBPJPY · D/.test(L.esportaMd(NN,TT,"fx","2026-11-01","2026-11-30")));}
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

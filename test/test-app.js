@@ -67,6 +67,21 @@ try{
  await clk($('[data-sm="fx"]'));
  ok("forex: da W a H1, niente finestre",$$("[data-ctf]").map(b=>b.dataset.ctf).join()==="W,D,H4,H1"&&!$("[data-w]")&&/il setup decide/.test($("#view").textContent));
  await clk($('[data-cmode="trade"]'));ok("forex: trade parte con due posizioni",$("[data-cpos]").classList.contains("on"));
+ // coppia del forex
+ await clk($('[data-pc=""]'));
+ ok("coppia: barra delle coppie solo sul forex, parte da tutte",!!$("#pairs")&&$('[data-pc=""]').classList.contains("on")&&/nessuna coppia/.test($("[data-cpair]").textContent));
+ await typ("[data-crr]","1:2");await typ("#cTxt","prova");await clk($("#cInvia"));
+ ok("coppia: trade forex senza coppia non parte",/Scegli la coppia/.test($("#toast").textContent)&&!window.__W.some(x=>x[0]==="insert"&&x[1].motivo==="prova"));
+ await clk($('[data-cmode="nota"]'));
+ $("#newPair").value="eur/usd";$("#newPair").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));await W(60);
+ ok("coppia: nuova coppia scritta a mano diventa EURUSD ed è scelta",!!$('[data-pc="EURUSD"]')&&$('[data-pc="EURUSD"]').classList.contains("on")&&/EURUSD/.test($("[data-cpair]").textContent)&&/EURUSD/.test($(".fday").textContent));
+ await clk($('[data-ctf="D"]'));await clk($('[data-cb="dn"]'));await typ("#cTxt","Daily ribassista sotto la AOI");await clk($("#cInvia"));await W(200);
+ {const r=window.__W.filter(x=>x[0]==="insertN").slice(-1)[0][1];ok("coppia: nota forex salvata con la coppia",r.strategia==="fx"&&r.coppia==="EURUSD"&&r.tf==="D",JSON.stringify(r));}
+ ok("coppia: etichetta sulla nota e lettura della coppia",!!$(".ncard .tfb.pr")&&/Daily ribassista/.test($(".mtf").textContent));
+ $("#newPair").value="gbpjpy";$("#newPair").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));await W(60);
+ ok("coppia: su un'altra coppia la nota non si vede e la lettura è vuota",!/Daily ribassista/.test($("#feed").textContent)&&!/Daily ribassista/.test($(".mtf").textContent));
+ await clk($('[data-pc=""]'));ok("coppia: tutte le rimostra",/Daily ribassista/.test($("#feed").textContent));
+ await clk($('[data-sm="xau"]'));ok("coppia: sull'oro niente barra",!$("#pairs")&&!$("[data-cpair]"));await clk($('[data-sm="fx"]'));await clk($('[data-cmode="trade"]'));
  await clk($('[data-cmode="nota"]'));await clk($('[data-sm="xau"]'));
  // ---- NUOVO TRADE dal calendario
  await go("#calendario");
@@ -139,6 +154,7 @@ try{
  ok("elimina: riga tolta e immagini rimosse",window.__rows.length===N+1&&window.__W.some(w=>w[0]==="remove")&&$("#sheet").hidden);
  // ---- DUE POSIZIONI (forex: 2 % = 1 % a TP1 1:1 + 1 % a TP finale)
  await go("#nuovo");await clk($('[data-fs="fx"]'));
+ ok("coppia: campo nella scheda solo sul forex",!!$('[data-ff="c"]'));await typ('[data-ff="c"]',"gbp-usd");
  ok("due posizioni: sul forex parte con due posizioni",$('[data-fpos="2"]').classList.contains("on")&&$('[data-ff="p1r"]').value==="1"&&$('[data-calc="r2"]').value==="1"&&$('[data-ff="p1rr"]').value==="1:1");
  await typ('[data-ff="rrTxt"]',"1:3");ok("due posizioni: TP1 +1 %, TP +3 %, stop -2 %",$('[data-calc="tp1"]').value==="+1,00 %"&&$('[data-calc="tp2"]').value==="+3,00 %"&&/-2,00 %/.test($('[data-calc="sl"]').textContent));
  await typ('[data-ff="p1r"]',"1.5");ok("due posizioni: divisione 1,5 + 0,5",$('[data-calc="r2"]').value==="0,5"&&$('[data-calc="tp2"]').value==="+1,50 %");
@@ -147,7 +163,7 @@ try{
  await typ('[data-ff="p1r"]',"1");ok("due posizioni: riepilogo",/2 posizioni · 1:1 \/ 1:3/.test($(".sum").textContent));
  await clk($("#saveSheet"));await W(250);
  const ins2=window.__W.filter(w=>w[0]==="insert").slice(-1)[0][1];
- ok("due posizioni: riga salvata",ins2.strategia==="fx"&&ins2.rischio===2&&ins2.rr===3&&ins2.posizioni&&ins2.posizioni.rischio1===1&&ins2.posizioni.rr1===1&&ins2.posizioni.esito1===null,JSON.stringify(ins2));
+ ok("due posizioni: riga salvata",ins2.strategia==="fx"&&ins2.coppia==="GBPUSD"&&ins2.rischio===2&&ins2.rr===3&&ins2.posizioni&&ins2.posizioni.rischio1===1&&ins2.posizioni.rr1===1&&ins2.posizioni.esito1===null,JSON.stringify(ins2));
  await go("#sessione");await clk($('[data-sm="fx"]'));ok("due posizioni: nel flusso forex",/2 posizioni · 1:1 \/ 1:3/.test($("#feed").textContent));
  await clk($("[data-close]"));ok("due posizioni: chiusura con due file di pulsanti",$$("[data-po1]").length===3&&$$("[data-po2]").length===4);
  await clk($('[data-po1="tp"]'));await clk($("#saveSheet"));ok("due posizioni: con una sola posizione scelta non chiude",!$("#sheet").hidden&&/Manca l'esito/.test($("#toast").textContent));
@@ -173,7 +189,11 @@ try{
  ok("statistiche: niente confluenze né stato prima",!/Le confluenze|Come ero prima/.test(v));}
  if(N){ok("statistiche: time frame a favore del bias (daily)",$$(".hbars")[0].textContent.includes("D"));ok("statistiche: sicurezza a fine sessione",/4\/5/.test($("#view").textContent));ok("statistiche: quando fai il tuo con i trade da piano vinti",$$(".tcard").length>=1)}
  await clk($("[data-exp]"));await W(100);ok("esporta: file per Sara con note e trade",/# Diario XAUUSD/.test(window.__ultimoExport||"")&&/Scritta il giorno dopo/.test(window.__ultimoExport)&&/TRADE short/.test(window.__ultimoExport)||/TRADE/.test(window.__ultimoExport),(window.__ultimoExport||"").slice(0,200));
- await clk($('[data-st="fx"]'));ok("statistiche: passa a forex, senza finestre",$('[data-st="fx"]').classList.contains("on")&&!/Le tue finestre/.test($("#view").textContent)&&/AOI/.test($("#view").textContent));
+ await clk($('[data-st="fx"]'));
+ ok("coppia: statistiche forex con le coppie",/Le tue coppie/.test($("#view").textContent)&&!!$('[data-stc="GBPUSD"]'),$("#view").textContent.slice(0,200));
+ await clk($('[data-stc="GBPUSD"]'));ok("coppia: filtro sulla coppia",$('[data-stc="GBPUSD"]').classList.contains("on")&&/GBPUSD · \d+ trade chiusi/.test($("#view").textContent)&&!/Le tue coppie/.test($("#view").textContent));
+ await clk($('[data-stc=""]'));
+ ok("statistiche: passa a forex, senza finestre",$('[data-st="fx"]').classList.contains("on")&&!/Le tue finestre/.test($("#view").textContent)&&/AOI/.test($("#view").textContent));
  // ---- IMPOSTAZIONI
  await clk($("#gearBtn"));ok("impostazioni: stato archivio e mail",/collegato/.test($("#syncSt").textContent)&&/test@test.it/.test($("#who").textContent));
  await clk($('#pop [data-pal="verde"]'));ok("impostazioni: verde toglie data-pal",!document.documentElement.hasAttribute("data-pal"));
