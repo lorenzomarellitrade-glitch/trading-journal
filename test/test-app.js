@@ -82,10 +82,8 @@ try{
  ok("nuovo: orario precompilato e sessione a pulsanti",/\d\d:\d\d/.test($('[data-ff="ora"]').value)&&$$("[data-fse]").length===5);
  await typ('[data-ff="ora"]',"16:45");ok("nuovo: cambiando l'orario la sessione segue",$('[data-fse="Londra + New York"]').classList.contains("on"));
  await clk($('[data-fse="Londra"]'));ok("nuovo: sessione scelta a mano",$('[data-fse="Londra"]').classList.contains("on"));
- await clk($('[data-fd="short"]'));for(let i=0;i<5;i++)await clk($('[data-fc="'+i+'"]'));
- ok("nuovo: checklist 5/5",/5\/5 · completa/.test($(".sum").textContent));
- await clk($('[data-fk="candela di rifiuto"]'));$("#newConf").value="mia confluenza";await clk($("#addConf"));
- ok("nuovo: confluenza nuova aggiunta e selezionata",$('[data-fk="mia confluenza"]')&&$('[data-fk="mia confluenza"]').classList.contains("on"));
+ await clk($('[data-fd="short"]'));
+ ok("nuovo: scheda come il diario, niente checklist, confluenze e stato prima",!$("[data-fc]")&&!$("[data-fk]")&&!$("#newConf")&&!$("[data-fp]")&&!/checklist/i.test($("#sheetIn").textContent));
  ok("nuovo: rischio precompilato 2 %",$('[data-ff="risk"]').value==="2");
  await typ('[data-ff="rrTxt"]',"1:x");ok("nuovo: RR sbagliato segnato in rosso",$('[data-ff="rrTxt"]').classList.contains("bad")&&$('[data-calc="tp"]').value==="—");
  $('[data-ff="rrTxt"]').focus();await typ('[data-ff="rrTxt"]',"1:2,5");ok("nuovo: RR 1:2,5 con rischio 2 = SL -2 %, TP +5 %",$('[data-calc="sl"]').value==="-2,00 %"&&$('[data-calc="tp"]').value==="+5,00 %"&&!$('[data-ff="rrTxt"]').classList.contains("bad"),$('[data-calc="tp"]').value);
@@ -101,7 +99,7 @@ try{
  ok("nuovo: screenshot incollato compare",$$(".drop .thumbs img").length===1&&/immagini[^\d]*2/.test($(".sum").textContent.replace(/\s+/g," ")));
  await clk($("#saveSheet"));await W(250);
  ok("salva: scheda chiusa e toast",$("#sheet").hidden&&/salvato/.test($("#toast").textContent),$("#toast").textContent);
- const ins=window.__W.filter(w=>w[0]==="insert");ok("salva: una riga inserita con i dati giusti",ins.length===1&&ins[0][1].direzione==="short"&&ins[0][1].checklist.join()==="1,1,1,1,1"&&ins[0][1].confluenze.includes("mia confluenza")&&ins[0][1].sessione==="Londra"&&ins[0][1].ora==="16:45"&&ins[0][1].aperto===true&&ins[0][1].motivo==="Rottura pulita"&&ins[0][1].rischio===1&&ins[0][1].rr===2,JSON.stringify(ins[0]&&ins[0][1]));
+ const ins=window.__W.filter(w=>w[0]==="insert");ok("salva: una riga inserita con i dati giusti",ins.length===1&&ins[0][1].direzione==="short"&&ins[0][1].sessione==="Londra"&&ins[0][1].ora==="16:45"&&ins[0][1].aperto===true&&ins[0][1].motivo==="Rottura pulita"&&ins[0][1].rischio===1&&ins[0][1].rr===2,JSON.stringify(ins[0]&&ins[0][1]));
  ok("salva: screenshot caricato nella cartella dell'utente",window.__files.filter(f=>!f.includes("/note-")).length===1&&window.__files.filter(f=>!f.includes("/note-"))[0].startsWith("uid-1/u"));
  const up=window.__W.filter(w=>w[0]==="update");ok("salva: percorso immagine scritto nel trade",up.length===1&&up[0][1].immagini.length===1);
  ok("calendario: il giorno mostra il trade aperto",/aperto/.test($("#view").textContent));
@@ -132,7 +130,7 @@ try{
  await clk($('[data-tf="fx"]'));ok("trade: filtro forex",$$(".tlist .tr").length===window.__rows.filter(r=>r.strategia==="fx").length);
  await clk($('[data-tf="all"]'));await clk($('[data-tv="grid"]'));
  // ---- MODIFICA ed ELIMINA
- await clk($$(".tcard")[0]);ok("trade chiuso: si apre la scheda modificabile",/Il trade/.test($("#sheetIn h2").textContent)&&$$("[data-fc]").length===5&&$$("[data-fout]").length===4&&$('[data-fout="sl"]').classList.contains("on"));
+ await clk($$(".tcard").find(c=>!c.querySelector(".res.o")));ok("trade chiuso: si apre la scheda modificabile",/Il trade/.test($("#sheetIn h2").textContent)&&!$("[data-fc]")&&!!$('[data-ff="why"]')&&$$("[data-fout]").length===4&&$('[data-fout="sl"]').classList.contains("on"),[$("#sheetIn h2").textContent,!!$("[data-fc]"),!!$('[data-ff="why"]'),$$("[data-fout]").length,$("#sheetIn main").textContent.slice(0,300)].join(" | "));
  await clk($('[data-fout="tp"]'));await typ('[data-ff="rrTxt"]',"1:");await typ('[data-ff="rrTxt"]',"1:3");ok("modifica: RR corretto a metà, TP resta scelto e si ricalcola",$('[data-fout="tp"]').classList.contains("on")&&/· \+3 R/.test($("#sheetIn").textContent));
  await typ('[data-ff="rrTxt"]',"1:");await clk($("#saveSheet"));ok("modifica: trade chiuso senza esito non si salva",!$("#sheet").hidden&&(/Manca l'esito|RR non valido/.test($("#toast").textContent)));
  await typ('[data-ff="rrTxt"]',"1:2");
