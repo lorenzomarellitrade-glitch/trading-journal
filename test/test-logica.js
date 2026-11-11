@@ -115,7 +115,12 @@ ok("finestre: 8:00 e 18:59 dentro, 10:30 e 19:00 fuori",L.inFinestra("08:00")&&L
 ok("finestre: solo oro e con orario",L.finestre([t({ora:"09:00",res:1}),t({ora:"13:00",res:-1}),t({ora:"09:00",s:"fx",res:1})]).with.n===1);
 {const N=[nn({d:"2026-11-09"}),nn({d:"2026-11-10"}),nn({d:"2026-11-10",tipo:"fine"}),nn({d:"2026-10-01"})];const T=[t({d:"2026-11-10"})];
  const c=L.costanza(N,T,"xau","2026-11-01","2026-11-30");ok("costanza: 2 giorni scritti, 1 chiusa, 1 senza trade",c.giorni===2&&c.chiuse===1&&c.senzaTrade===1,c);}
-{const T=[t({why:"Presa la Liquidità sotto Asia, rottura al 5'",res:1}),t({why:"rottura anticipata",res:-1}),t({why:"",res:1})];
- const w=L.parole(T,"xau");const g=k=>w.find(x=>x.k===k);ok("parole: maiuscole ignorate, win rate per parola",g("liquidità").with.n===1&&g("liquidità").with.wr===100&&g("rottura").with.n===2&&g("rottura").with.wr===50&&!g("PRZ"),w.map(x=>x.k));}
+{const T=[t({id:"a",d:"2026-11-10",ora:"09:00",why:"Fallimento e rottura al 5' sul Supporto",res:1}),t({id:"b",d:"2026-11-10",ora:"09:30",why:"solo rottura",res:-1}),t({id:"c",d:"2026-11-09",why:"",res:1})];
+ const N=[nn({d:"2026-11-10",ora:"08:00",txt:"testa e spalle sul 15"}),nn({d:"2026-11-10",ora:"10:00",txt:"zona estrema"})];
+ const w=L.parole(N,T,"xau");const g=k=>w.find(x=>x.k===k);
+ ok("parole: fallimento e rottura solo se ci sono tutte e due",g("fallimento e rottura").with.n===1&&g("fallimento e rottura").with.wr===100,w.map(x=>x.k));
+ ok("parole: supporto vale come PRZ, maiuscole ignorate",g("supporto o resistenza (PRZ)").with.n===1);
+ ok("parole: contano anche le note del giorno scritte prima dell'entrata",g("testa e spalle").with.n===2&&!g("zona estrema"));
+ ok("parole: niente liquidità",!L.PAROLE.xau.some(p=>/liquidit/.test(p[0])));}
 ok("checklist: conta solo i trade con almeno una spunta",L.conChecklist([t({check:[0,0,0,0,0]}),t({check:[1,0,0,0,0]})],"xau")===1);
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);

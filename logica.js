@@ -99,13 +99,18 @@ const inFinestra=o=>{const h=minuti(o)/60;return(h>=8&&h<10.5)||(h>=16.5&&h<19)}
 const finestre=T=>splitBy(closedOf(T,"xau").filter(t=>t.ora),t=>inFinestra(t.ora));
 /* costanza del diario in un periodo */
 function costanza(N,T,s,da,a){const dn=new Set(N.filter(n=>n.s===s&&n.d>=da&&n.d<=a).map(n=>n.d)),dt=new Set(T.filter(t=>t.s===s&&t.d>=da&&t.d<=a).map(t=>t.d));return{giorni:dn.size,chiuse:new Set(N.filter(n=>n.s===s&&n.tipo==="fine"&&n.d>=da&&n.d<=a).map(n=>n.d)).size,senzaTrade:[...dn].filter(d=>!dt.has(d)).length}}
-/* le parole della strategia di Lore nel "perché entro" */
-const PAROLE={xau:["liquidità","PRZ","evidence","fallimento","rottura","Asia","rifiuto"],fx:["AOI","psicologico","evidence","engulfing","rifiuto","lower high","higher low"]};
-function parole(T,s){const L=closedOf(T,s);return PAROLE[s].map(w=>({k:w,...splitBy(L,t=>(t.why||"").toLowerCase().includes(w.toLowerCase()))})).filter(x=>x.with.n>0).sort((a,b)=>b.with.wr-a.with.wr)}
+/* le parole della strategia di Lore (dalle sue spiegazioni in chat, 2026-11-11): [etichetta, alternative]; "a+b" = servono tutte e due */
+const PAROLE={
+ xau:[["fallimento e rottura",["fallimento+rottura"]],["testa e spalle",["testa e spalle"]],["supporto o resistenza (PRZ)",["supporto","resistenz","prz"]],["supply o demand",["supply","demand"]],["evidence",["evidence","evidenz"]],["zona estrema",["estrem"]],["zona decisionale",["decisional"]],["livello psicologico o quartile",["psicologic","quartil"]],["time frame allineati",["allineat","in linea"]],["candela di rifiuto",["rifiut"]],["engulfing",["engulfing"]],["retest",["retest","ritest"]],["seconda rottura",["seconda rottura"]],["Fibonacci, golden zone",["fibo","golden"]],["imbalance",["imbalance","inefficien"]],["Wyckoff",["wyckoff"]]],
+ fx:[["AOI, area di interesse",["aoi","area di interesse","area of interest"]],["livello psicologico",["psicologic"]],["supporto o resistenza",["supporto","resistenz"]],["evidence",["evidence","evidenz"]],["engulfing",["engulfing"]],["fallimento e rottura",["fallimento+rottura"]],["testa e spalle",["testa e spalle"]],["time frame allineati",["allineat","in linea"]],["candela di rifiuto",["rifiut"]],["retest",["retest","ritest"]],["Fibonacci, golden zone",["fibo","golden"]]]};
+const haParola=(txt,alt)=>alt.some(a=>a.split("+").every(w=>txt.includes(w.toLowerCase())));
+/* il testo di un trade: il "perché entro" più le note dello stesso giorno scritte prima dell'entrata */
+const testoTrade=(N,t)=>[t.why||"",...N.filter(n=>n.s===t.s&&n.d===t.d&&n.tipo!=="fine"&&(!t.ora||!n.ora||n.ora<=t.ora)).map(n=>n.txt||"")].join(" ").toLowerCase();
+function parole(N,T,s){const L=closedOf(T,s).map(t=>({...t,_txt:testoTrade(N,t)}));return PAROLE[s].map(([k,alt])=>({k,...splitBy(L,t=>haParola(t._txt,alt))})).filter(x=>x.with.n>0).sort((a,b)=>b.with.wr-a.with.wr)}
 /* quando fai il tuo: trade da piano andati a segno, i più recenti */
 const prove=(T,s,n)=>closedOf(T,s).filter(t=>t.piano!==false&&t.res>0).slice(-(n||6)).reverse();
 const conChecklist=(T,s)=>closedOf(T,s).filter(t=>(t.check||[]).some(Boolean)).length;
 
-const L={pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+const L={pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);

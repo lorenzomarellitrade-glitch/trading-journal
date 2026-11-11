@@ -149,7 +149,7 @@ function vTrades(){
 
 let stS="xau";
 function vStats(){
-  const L=closedOf(T,stS),s=stats(L),cv=curve(L),al=allineamento(N,T,stS),sc=sicTable(N,T,stS),pt=pianoTable(T,stS),ac=accordo(N,T,stS),pz=pazienza(N,T,stS),pw=parole(T,stS),pr=prove(T,stS,6),co=costanza(N,T,stS,spostaGiorno(TK,-29),TK),fi=stS==="xau"?finestre(T):null;
+  const L=closedOf(T,stS),s=stats(L),cv=curve(L),al=allineamento(N,T,stS),sc=sicTable(N,T,stS),pt=pianoTable(T,stS),ac=accordo(N,T,stS),pz=pazienza(N,T,stS),pw=parole(N,T,stS),pr=prove(T,stS,6),co=costanza(N,T,stS,spostaGiorno(TK,-29),TK),fi=stS==="xau"?finestre(T):null;
   const wr=x=>x.n?x.wr.toFixed(0)+" %":"—",rm=x=>x.n?fR(x.avgR)+" R":"—";
   const due=(a,la,b,lb)=>`<div class="kpis"><div class="kpi ${a.n&&b.n&&a.wr>b.wr?"good":""}"><b>${wr(a)}</b><span>${la} · ${a.n} trade · ${rm(a)}</span></div><div class="kpi"><b>${wr(b)}</b><span>${lb} · ${b.n} trade · ${rm(b)}</span></div></div>`;
   const min=v=>v==null?"—":Math.round(v)+"′";
@@ -166,8 +166,8 @@ function vStats(){
       ${sc.length?`<div class="vbars">${sc.map(x=>`<div class="vb ${x.n&&x.wr>=55?"good":x.n&&x.wr<45?"bad":""}"><b>${x.n?x.wr.toFixed(0)+" %":"—"}</b><i style="height:${Math.max(6,x.n?x.wr:0)}%"></i><span>${x.k}/5<br>${x.giorni} gg · ${x.n} trade</span></div>`).join("")}</div><div class="note">Se le colonne alte sono a destra, la tua sensazione ha ragione: fidati di lei.</div>`:`<div class="empty">Chiudi la sessione con la sicurezza da 1 a 5: qui vedrai se la tua sensazione ha ragione.</div>`}</section>
    </div>
    <div class="grid g-stats">
-    <section class="blk"><div class="lab"><span>Le parole della tua strategia</span><span>nel "perché entro" · barra = la scrivi · tacca = no</span></div>
-     ${pw.length?`<div class="hbars">${pw.map(hbar).join("")}</div><div class="note">Parole cercate: ${PAROLE[stS].join(", ")}. Il numero piccolo è in quanti trade la scrivi.</div>`:`<div class="empty">Compare quando nei trade chiusi scrivi perché entri con le parole della tua strategia (${PAROLE[stS].join(", ")}).</div>`}</section>
+    <section class="blk"><div class="lab"><span>Le parole della tua strategia</span><span>barra = la scrivi · tacca = no</span></div>
+     ${pw.length?`<div class="hbars">${pw.map(hbar).join("")}</div><div class="note">Cerca nel "perché entro" e nelle note del giorno scritte prima di entrare. Parole: ${PAROLE[stS].map(p=>p[0]).join(", ")}. Il numero piccolo è in quanti trade compare.</div>`:`<div class="empty">Compare quando nei trade chiusi scrivi perché entri con le parole della tua strategia (${PAROLE[stS].map(p=>p[0]).join(", ")}).</div>`}</section>
     <div class="col">
      <section class="blk"><div class="lab"><span>Pazienza</span><span>minuti dalla prima nota all'entrata</span></div>${pz.nV+pz.nP?`<div class="kpis"><div class="kpi"><b>${min(pz.vinti)}</b><span>vinti · ${pz.nV}</span></div><div class="kpi"><b>${min(pz.persi)}</b><span>persi · ${pz.nP}</span></div></div><div class="note">${pz.vinti!=null&&pz.persi!=null&&pz.persi<pz.vinti?"Nei trade persi entri prima: la fretta ti costa.":"Valore centrale (mediana) dei minuti."}</div>`:`<div class="empty">Compare quando scrivi le note prima di entrare, con l'orario.</div>`}</section>
      ${fi?`<section class="blk"><div class="lab"><span>Le tue finestre</span><span>8:00–10:30 · 16:30–19:00</span></div>${fi.with.n+fi.without.n?due(fi.with,"dentro",fi.without,"fuori"):`<div class="empty">Compare con i trade chiusi sull'oro.</div>`}</section>`:""}
