@@ -1,6 +1,6 @@
 // Journal di Lore: interfaccia + archivio su Supabase. La logica pura sta in logica.js (JL).
 (function(){
-const {resoconto,normCoppia,coppie,coppiaTable,filtraC,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
+const {giorniSettimana,resoconto,normCoppia,coppie,coppiaTable,filtraC,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 const today=new Date(); const TK=dk(today);
 const num=v=>v!=null&&v!==""&&isFinite(v);
@@ -74,9 +74,23 @@ function compositore(){
   else if(C.edit&&C.mode==="fine")bott=`<button type="button" class="btn gh" id="cAnnulla">Annulla</button><button type="button" class="btn pri" id="cInvia">Salva</button>`;
   return`<div class="comp" id="comp"><div class="cin2"><div class="box ${C.busy?"busy":""}">${C.salvato?`<div class="mini" style="margin-bottom:6px;color:var(--amber)">già salvato · mancano ${C.pending.length+C.daCollegare.length} screenshot: premi di nuovo per riprovare, o Annulla</div>`:C.edit?`<div class="mini" style="margin-bottom:6px">stai modificando una nota · per spostarla cambia il giorno</div>`:oggi?"":`<div class="avv" id="avvGiorno">Stai scrivendo su <b>${nomeGiorno(sesD)}</b>, non su oggi.<button type="button" data-dg="0">vai a oggi</button></div>`}<div class="crow">${sesS==="fx"&&C.mode!=="fine"?(()=>{const b=C.edit?N.find(n=>n.id===C.edit):null,c=b?b.c:sesC;return`<span class="tfb pr" data-cpair>${esc(c)||"nessuna coppia"}</span><span class="sep"></span>`})():""}${riga}</div><textarea id="cTxt" rows="2" placeholder="${ph}">${esc(C.txt)}</textarea><div class="cbot"><div class="cths">${th||`<span class="mini">⌘V incolla · trascina un'immagine · ⌘↵ invia${oggi?"":" · giorno passato: metti l'orario"}</span>`}</div><div class="cbtn">${bott}</div></div></div></div></div>`;
 }
-/* resoconto in % sul conto: giorno, settimana, mese (Lore, 2026-11-12). Somma semplice degli esiti, per mercato */
-function reso(s,d){const r=resoconto(T,s,d),c=(x,l)=>`<div class="ro"><b class="${x.n?(x.sum>0?"w":x.sum<0?"l":""):""}">${x.n?pct(x.sum):"—"}</b><span>${l}<small>${x.n?x.n+" trade":"nessun trade"}</small></span></div>`;
-  return`<div class="reso">${c(r.giorno,d===TK?"oggi":"giorno")}${c(r.settimana,"settimana")}${c(r.mese,"mese")}</div>`}
+/* striscia della settimana (Lore, 2026-11-12, variante 2): una barra per giorno, oro e forex impilati, perdite in basso in rosso.
+   In alto il totale della settimana, a destra il mese. Somma semplice degli esiti in %. */
+const GSET=["lun","mar","mer","gio","ven","sab","dom"],corto=v=>(v>0?"+":"")+(+v).toFixed(2).replace(".",",");
+function mercatiCon(ms){const c=ms.filter(m=>T.some(t=>t.s===m));return c.length?c:ms}
+function striscia(ms,d){
+  const one=ms.length===1,r=resoconto(T,one?ms[0]:null,d),som=(x,f)=>ms.reduce((a,m)=>a+f(x[m].sum),0);
+  const G=giorniSettimana(T,d).map((x,i)=>({...x,i})).filter(x=>x.i<5||ms.some(m=>x[m].n));
+  const pos=x=>som(x,v=>Math.max(0,v)),neg=x=>som(x,v=>Math.min(0,v)),max=Math.max(.5,...G.map(x=>Math.max(pos(x),-neg(x))));
+  const giu=G.some(x=>neg(x)<0),vuota=!r.settimana.n,corrente=giorniSettimana(T,TK)[0].d===G[0].d;
+  const bar=x=>{let up=50,dn=50,h="";ms.forEach(m=>{const v=x[m].sum;if(!v)return;const p=Math.abs(v)/max*50;
+      if(v>0){up-=p;h+=`<i class="${m}" style="top:${up}%;height:${p}%"></i>`}else{h+=`<i class="neg" style="top:${dn}%;height:${p}%"></i>`;dn+=p}});
+    const n=ms.reduce((a,m)=>a+x[m].n,0),t=ms.reduce((a,m)=>a+x[m].sum,0);
+    if(n)h+=`<em style="top:${t>=0?`calc(${up}% - 15px)`:`calc(${dn}% + 2px)`}">${corto(Math.round(t*100)/100)}</em>`;
+    return`<div class="wd${x.d===d?" on":""}" title="${fmtD(x.d)}${n?" · "+n+" trade":""}">${h}</div>`};
+  return`<div class="wk-top"><div><span class="k">${corrente&&d===TK?"Questa settimana":"Settimana dal "+fmtD(G[0].d).slice(0,5)} · ${one?STRAT[ms[0]].n:"oro + forex"}</span><b class="wk-n">${vuota?"—":pct(r.settimana.sum)}</b><span class="k">${d===TK?"oggi":"il "+fmtD(d).slice(0,5)} ${r.giorno.n?pct(r.giorno.sum):"—"} · ${r.settimana.n} trade</span></div><div class="wk-m">mese<b>${r.mese.n?pct(r.mese.sum):"—"}</b></div></div>
+   <div class="strip" style="--g:${G.length}">${G.map(bar).join("")}</div><div class="wdays" style="--g:${G.length}">${G.map(x=>`<span class="${x.d===d?"on":""}">${GSET[x.i]} ${+x.d.slice(8)}</span>`).join("")}</div>
+   ${vuota?`<div class="note" style="margin:10px 0 0">Nessun trade chiuso in questa settimana.</div>`:(!one||giu)?`<div class="wleg">${one?"":ms.map(m=>`<span><i class="${m}"></i>${STRAT[m].n} ${resoconto(T,m,d).settimana.n?corto(resoconto(T,m,d).settimana.sum):"—"}</span>`).join("")}${giu?`<span><i class="neg"></i>perdita</span>`:""}</div>`:""}`}
 function vSess(){
   const tfs=TFS[sesS];if(!tfs.includes(C.tf))C.tf=tfs[0];
   const cF=sesS==="fx"&&sesC?sesC:null,cL=sesS==="fx"?[...new Set([...coppie(N,T),...memC,...(sesC?[sesC]:[])])]:[];
@@ -86,7 +100,7 @@ function vSess(){
   ${sesS==="fx"?`<div class="pairs enter" id="pairs"><span class="clab">coppia</span><button type="button" class="chip ${sesC?"":"on"}" data-pc="">tutte</button>${cL.map(c=>`<button type="button" class="chip ${c===sesC?"on":""}" data-pc="${esc(c)}">${esc(c)}</button>`).join("")}<input type="text" id="newPair" autocomplete="off" autocapitalize="characters" placeholder="＋ nuova, es. EURUSD"></div>`:""}
   <div class="slay enter"><div class="feed" id="feed"><div class="fday">${nomeGiorno(sesD)} · ${cF?esc(cF):STRAT[sesS].n}</div>${F.length?F.map(cardFlusso).join(""):`<div class="empty"><b>${sesD===TK?"La sessione è vuota.":"Niente scritto in questo giorno."}</b>Scegli il time frame, incolla lo screenshot e scrivi cosa vedi. Anche i giorni senza trade contano.</div>`}</div>
   <aside class="sside">
-   <section class="blk" id="sReso"><div class="lab"><span>Resoconto · % sul conto</span><span>${STRAT[sesS].n}${sesD!==TK?" · al "+fmtD(sesD).slice(0,5):""}</span></div>${reso(sesS,sesD)}<div class="lab tot"><span>Totale XAUUSD + FOREX</span></div><div id="sTot">${reso(null,sesD)}</div></section>
+   <section class="blk" id="sReso">${striscia(mercatiCon(["xau","fx"]),sesD)}</section>
    <section class="blk"><div class="clock"><b id="clk">--:--:--</b><small id="clkSess"></small></div>${sesS==="xau"?`<div class="wins" id="win"><span data-w="La mia">8:00–10:30</span><span data-w="La mia 2">16:30–19:00</span></div>`:`<div class="note">Forex: nessuna finestra, il setup decide.</div>`}</section>
    <section class="blk"><div class="lab"><span>La mia lettura</span><span>${sesS==="fx"?(cF?esc(cF):"scegli una coppia"):"ultima nota per time frame"}</span></div><div class="mtf">${lt.map(({tf,n})=>n?`<div><b>${tf}</b><p title="${esc(n.txt)}">${esc(n.txt||"(solo immagine)")}${n.d!==sesD?` <em>· ${fmtD(n.d).slice(0,5)}</em>`:""}</p><i class="${n.bias||""}">${n.bias?BIAS[n.bias].slice(0,1):""}</i></div>`:`<div class="vuoto"><b>${tf}</b><p>ancora niente</p><i></i></div>`).join("")}</div></section>
    ${(()=>{const pt=pianoTable(T,sesS).with,ls=closedOf(T,sesS).filter(t=>t.less).slice(-1)[0];return pt.n||ls?`<section class="blk"><div class="lab"><span>Promemoria</span></div>${pt.n?`<div class="mini">Quando segui il piano: <b>${pt.wr.toFixed(0)} %</b> · R medio <b>${fR(pt.avgR)}</b> · ${pt.n} trade</div>`:""}${ls?`<p class="quote" style="font-size:13px;margin-top:10px">${esc(ls.less)}<small>${fmtD(ls.d)}</small></p>`:""}</section>`:""})()}
@@ -157,11 +171,10 @@ let tView="grid",tFilt="all";
 try{tView=localStorage.getItem("journal-vista")||"grid"}catch(e){}
 function vTrades(){
   const L=T.slice().reverse().filter(t=>tFilt==="all"||t.s===tFilt);
-  const rs=(tFilt==='all'?['xau','fx']:[tFilt]).filter(m=>tFilt!=='all'||T.some(t=>t.s===m));
   const body=!L.length?`<div class="empty"><b>Nessun trade.</b>Il primo lo registri dalla Sessione con "＋ Entro", oppure da "+ Nuovo trade".</div>`
    :tView==="list"?`<div class="tlist">${L.map(t=>`<button type="button" class="tr" data-open="${t.id}">${firstImg(t,"thumb")}<span class="sym">${esc(sim(t))}<small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""} · ${t.dir}</small></span><span class="tags">${esc(t.why)||"—"}</span><span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}<span class="st">${t.open?"":t.piano===false?"fuori piano":"piano ok"}</span></span></button>`).join("")}</div>`
    :`<div class="tgrid">${L.map(t=>`<button type="button" class="tcard" data-open="${t.id}">${firstImg(t,"im").replace("</div>",`<span class="res ${t.open?"o":t.res>0?"w":"l"}">${t.open?"aperto":pct(t.res)}</span></div>`)}<div class="bd"><b>${esc(sim(t))} · ${t.dir}</b><small>${fmtD(t.d)}${t.ora?" "+esc(t.ora):""}${t.ses?" · "+esc(t.ses):""}</small><small>${esc(t.why)||"—"}</small></div></button>`).join("")}</div>`;
-  return`<div class="col enter"><div class="tools"><div class="seg"><button type="button" data-tf="all" class="${tFilt==="all"?"on":""}">Tutti</button><button type="button" data-tf="xau" class="${tFilt==="xau"?"on":""}">XAUUSD</button><button type="button" data-tf="fx" class="${tFilt==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${L.length} trade</span><div class="seg"><button type="button" data-tv="grid" class="${tView==="grid"?"on":""}">▦ Quadrotti</button><button type="button" data-tv="list" class="${tView==="list"?"on":""}">☰ Lista</button></div></div>${rs.length?`<section class="blk" id="tReso">${rs.map(m=>`<div class="lab"><span>${STRAT[m].n} · % sul conto</span></div>${reso(m,TK)}`).join("")}${rs.length>1?`<div class="lab tot"><span>Totale XAUUSD + FOREX</span></div><div id="tTot">${reso(null,TK)}</div>`:""}</section>`:""}${body}</div>`;
+  return`<div class="col enter"><div class="tools"><div class="seg"><button type="button" data-tf="all" class="${tFilt==="all"?"on":""}">Tutti</button><button type="button" data-tf="xau" class="${tFilt==="xau"?"on":""}">XAUUSD</button><button type="button" data-tf="fx" class="${tFilt==="fx"?"on":""}">FOREX</button></div><span class="note" style="margin:0">${L.length} trade</span><div class="seg"><button type="button" data-tv="grid" class="${tView==="grid"?"on":""}">▦ Quadrotti</button><button type="button" data-tv="list" class="${tView==="list"?"on":""}">☰ Lista</button></div></div>${T.length?`<section class="blk" id="tReso">${striscia(tFilt==="all"?mercatiCon(["xau","fx"]):[tFilt],TK)}</section>`:""}${body}</div>`;
 }
 
 let stS="xau";

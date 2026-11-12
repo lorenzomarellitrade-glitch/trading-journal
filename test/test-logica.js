@@ -152,5 +152,10 @@ ok("coppia: normalizza",L.normCoppia("eur/usd")==="EURUSD"&&L.normCoppia(" gbp j
  const v=L.resoconto(T,"xau","2026-11-09");ok("resoconto: lunedì apre la settimana",v.settimana.n===1&&v.settimana.sum===0.4,v);
  const dom=L.resoconto(T,"xau","2026-11-08");ok("resoconto: domenica chiude la settimana di lunedì 2",dom.settimana.n===1&&dom.settimana.sum===-1,dom);
  const tot=L.resoconto(T,null,"2026-11-12");ok("resoconto: totale oro + forex",tot.giorno.n===3&&tot.giorno.sum===9.5&&tot.mese.sum===10.9,tot);
+ const G=L.giorniSettimana(T,"2026-11-12");
+ ok("settimana: 7 giorni da lunedì 9 a domenica 15",G.length===7&&G[0].d==="2026-11-09"&&G[6].d==="2026-11-15",G.map(x=>x.d));
+ ok("settimana: oro e forex per giorno",G[3].xau.n===2&&G[3].xau.sum===0.5&&G[3].fx.sum===9&&G[1].xau.sum===2&&G[0].xau.sum===0.4,G[3]);
+ ok("settimana: i giorni dopo d restano vuoti",G[4].xau.n===0&&G[4].xau.sum===0);
+ const G2=L.giorniSettimana(T,"2026-11-01");ok("settimana: a cavallo del mese parte lunedì 26 ottobre",G2[0].d==="2026-10-26"&&G2[5].xau.sum===3&&G2[6].d==="2026-11-01",G2.map(x=>x.d));
  const e=L.resoconto([],"xau","2026-11-12");ok("resoconto: vuoto senza NaN",e.giorno.n===0&&e.giorno.sum===0&&e.mese.sum===0);}
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);
