@@ -151,5 +151,6 @@ ok("coppia: normalizza",L.normCoppia("eur/usd")==="EURUSD"&&L.normCoppia(" gbp j
  ok("resoconto: altro mercato separato",L.resoconto(T,"fx","2026-11-12").giorno.sum===9);
  const v=L.resoconto(T,"xau","2026-11-09");ok("resoconto: lunedì apre la settimana",v.settimana.n===1&&v.settimana.sum===0.4,v);
  const dom=L.resoconto(T,"xau","2026-11-08");ok("resoconto: domenica chiude la settimana di lunedì 2",dom.settimana.n===1&&dom.settimana.sum===-1,dom);
+ const tot=L.resoconto(T,null,"2026-11-12");ok("resoconto: totale oro + forex",tot.giorno.n===3&&tot.giorno.sum===9.5&&tot.mese.sum===10.9,tot);
  const e=L.resoconto([],"xau","2026-11-12");ok("resoconto: vuoto senza NaN",e.giorno.n===0&&e.giorno.sum===0&&e.mese.sum===0);}
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);
