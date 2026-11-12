@@ -60,6 +60,11 @@ function checkTable(T,s){const L=closedOf(T,s);return STRAT[s].check.map((c,i)=>
 function statoTable(T,s){const L=closedOf(T,s);return SK.map(c=>({k:c,...stats(L.filter(t=>t.prima===c))})).filter(x=>x.n)}
 function curve(list){let a=0;return list.map(t=>a+=t.res)}
 function serieP(T){let n=0;for(const t of closedOf(T).slice().reverse()){if(t.piano!==false)n++;else break}return n}
+/* Resoconto in % sul conto (Lore, 2026-11-12): giorno, settimana (da lunedì) e mese del giorno d, trade chiusi di un mercato.
+   Somma semplice degli esiti in %, non composta. Conta il giorno di entrata del trade. */
+function resoconto(T,s,d){const[y,m,g]=d.split("-").map(Number),ref=new Date(y,m-1,g);const kl=dk(new Date(y,m-1,g-((ref.getDay()+6)%7))),km=d.slice(0,7);
+  const L=closedOf(T,s).filter(t=>t.d<=d),som=f=>{const x=L.filter(f);return{n:x.length,sum:r2(x.reduce((a,t)=>a+t.res,0))}};
+  return{giorno:som(t=>t.d===d),settimana:som(t=>t.d>=kl),mese:som(t=>t.d.startsWith(km))}}
 function weekOf(T,today){const mon=new Date(today);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const k=dk(mon);return T.filter(t=>!t.open&&t.d>=k)}
 
 
@@ -123,6 +128,6 @@ function coppiaTable(T){const g={};closedOf(T,"fx").forEach(t=>{(g[t.c||""]=g[t.
 function filtraC(N,T,c){return c==null?[N,T]:[N.filter(n=>n.s!=="fx"||delC(n,c)),T.filter(t=>t.s!=="fx"||t.c===c)]}
 const conChecklist=(T,s)=>closedOf(T,s).filter(t=>(t.check||[]).some(Boolean)).length;
 
-const L={normCoppia,coppie,coppiaTable,filtraC,parseOra,pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
+const L={resoconto,normCoppia,coppie,coppiaTable,filtraC,parseOra,pianoTable,accordo,mediana,pazienza,inFinestra,finestre,costanza,PAROLE,parole,haParola,testoTrade,prove,conChecklist,TFS,BIAS,rowToN,nToRow,flusso,giorni,lettura,allineamento,sicTable,esportaMd,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,CONF_BASE,SESS,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,splitBy,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2};
 if(typeof module!=="undefined"&&module.exports)module.exports=L;else root.JL=L;
 })(typeof window!=="undefined"?window:globalThis);

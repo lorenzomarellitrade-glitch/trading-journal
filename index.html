@@ -243,6 +243,11 @@ input.calc.ok{color:var(--win)}input.calc.no{color:var(--loss)}
 .empty{padding:26px 10px;text-align:center;color:var(--mute);font-size:13px;line-height:1.6}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
 
+/* resoconto in % (2026-11-12) */
+.reso{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.reso .ro b{display:block;font-family:var(--m);font-size:clamp(16px,1.6vw,20px);font-weight:700;letter-spacing:-.02em;white-space:nowrap;line-height:1.15}
+.reso .ro span{display:block;font-size:12px;color:var(--mute)}.reso .ro small{display:block;font-size:11px;opacity:.75}
+#tReso{margin-bottom:14px}#tReso .reso{max-width:560px}#tReso .lab+.reso{margin-bottom:4px}#tReso .reso+.lab{margin-top:14px}
 /* ---- diario di sessione (2026-11-11) ---- */
 .sesbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .sesbar .seg{width:auto;grid-auto-columns:auto}.sesbar .seg button{font-family:var(--m);font-weight:600;padding:7px 16px}
@@ -309,7 +314,7 @@ input.calc.ok{color:var(--win)}input.calc.no{color:var(--loss)}
 .btn.pri{background:var(--acc);color:var(--acc-ink)}
 .btn.gh{background:var(--g2);border:1px solid var(--line)}
 .cal .d .dots i.n{background:var(--mute);width:5px;height:5px}
-@media(max-width:640px){.hd{flex-wrap:wrap;gap:10px}.hd .nav{order:3;flex-basis:100%;overflow-x:auto}#hdDate{display:none}.sside .blk:nth-child(n+3){display:none}.fe{grid-template-columns:1fr}.fe .fo{text-align:left;padding:0}}
+@media(max-width:640px){.hd{flex-wrap:wrap;gap:10px}.hd .nav{order:3;flex-basis:100%;overflow-x:auto}#hdDate{display:none}.sside .blk:nth-child(n+4){display:none}.fe{grid-template-columns:1fr}.fe .fo{text-align:left;padding:0}}
 
 /* ---- liquid glass, palette candela (Lore, 2026-11-11): vetro al massimo della trasparenza, stanza calda in penombra ---- */
 :root,:root[data-pal="mono"]{--a1:.03;--a2:.006;--bl:4px;--lu:.4;--om:.2;--al:1;--t1:.07;--b1:.045;--b2:.012;--bb:7px;--sm:.02;--in:.06;--sh:.18;--sb:10px;

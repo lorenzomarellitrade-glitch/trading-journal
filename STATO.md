@@ -1,6 +1,6 @@
 # Stato · trading-journal
 
-_Aggiornato: 2026-11-11_
+_Aggiornato: 2026-11-12_
 
 **Fatto:** journal nuovo al posto dell'app React, nello stesso repo e allo stesso indirizzo. Supabase riattivato (era in pausa), tabella `journal_trade` e bucket `screenshot` creati. Test: 30 di logica + 129 di interfaccia, tutti verdi. Palette mono, verde alternativa.
 **Manca:** prova vera di Lore con login, un trade con screenshot incollato e un link TradingView.
@@ -19,3 +19,5 @@ _Aggiornato: 2026-11-11_
 **2026-11-11, pubblicato:** SQL `2026-11-11-diario.sql` eseguito da Lore; tabella `journal_nota` e colonna `motivo` controllate (REST 200). Deploy fatto e versione nuova controllata online. Liste trade e calendario mostrano il "perché entro" al posto di checklist e confluenze. Parole della strategia prese dalle spiegazioni di Lore in chat. **Prossimo passo:** Lore registra i trade della settimana nel diario; dopo ~30 analisi, primo "Scarica per Sara" e resoconto con il trading-coach.
 
 **2026-11-11 sera (Lore):** orario di entrata scritto a mano (9, 915, 9:15), obbligatorio sui giorni passati. Scheda del trade allineata al diario: via checklist, confluenze e "come ero prima". Design liquid glass al massimo della trasparenza, palette "candela". Coppia del Forex su note e trade, con filtro nel diario e statistiche per coppia (`supabase/2026-11-11-coppia.sql`, da eseguire a mano prima di scrivere sul Forex). Test: 98 di logica, 339 verifiche in tutto. Caricato su gh-pages durante un guasto di GitHub Pages: da verificare online.
+
+**2026-11-12 (Lore), resoconto in %:** blocco "Resoconto · % sul conto" in cima alla colonna destra della Sessione (oggi o giorno scelto, settimana da lunedì, mese; per mercato) e sopra la lista nella sezione Trade (riferito a oggi, uno per mercato o quello filtrato). Somma semplice degli esiti in %, sul giorno di entrata. Funzione `resoconto` in logica.js. Test: 105 di logica, 366 verifiche, verdi. **Da fare:** deploy con l'OK di Lore.

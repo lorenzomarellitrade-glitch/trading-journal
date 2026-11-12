@@ -28,6 +28,8 @@ try{
  ok("sessione: oro da W a M5",$$("[data-ctf]").map(b=>b.dataset.ctf).join()==="W,D,H4,H1,M15,M5");
  ok("sessione: giorno di oggi",$("#sesDate").value===kOggi);
  ok("sessione vuota oggi: messaggio",/La sessione è vuota/.test($("#feed").textContent));
+ ok("sessione: resoconto in cima con oggi, settimana, mese",$(".sside .blk")===$("#sReso")&&$$("#sReso .ro").length===3&&/oggi.*settimana.*mese/s.test($("#sReso").textContent)&&/XAUUSD/.test($("#sReso .lab").textContent),$("#sReso")&&$("#sReso").textContent);
+ ok("sessione: resoconto di oggi vuoto = trattino",$$("#sReso .ro b")[0].textContent==="—"&&/nessun trade/.test($$("#sReso .ro")[0].textContent));
  await clk($("#cInvia"));ok("sessione: nota vuota non parte",/Scrivi cosa vedi/.test($("#toast").textContent));
  await clk($('[data-ctf="H4"]'));await clk($('[data-cb="up"]'));
  ok("sessione: time frame e bias scelti",$('[data-ctf="H4"]').classList.contains("on")&&$('[data-cb="up"]').classList.contains("on"));
@@ -152,7 +154,10 @@ try{
  await go("#trade");
  ok("trade: quadrotti con immagine",$$(".tcard").length===N+2&&$$(".tcard .im img").length>=1);
  await clk($('[data-tv="list"]'));ok("trade: vista lista",$$(".tlist .tr").length===N+2);
+ {const fx=window.__rows.some(r=>r.strategia==="fx");// "Tutti": un resoconto per ogni mercato che ha trade
+ ok("trade: resoconto per mercato sopra la lista",!!$("#tReso")&&$$("#tReso .reso").length===(fx?2:1)&&/XAUUSD/.test($("#tReso").textContent)&&/FOREX/.test($("#tReso").textContent)===fx,$("#tReso")&&$("#tReso").textContent);}
  await clk($('[data-tf="fx"]'));ok("trade: filtro forex",$$(".tlist .tr").length===window.__rows.filter(r=>r.strategia==="fx").length);
+ ok("trade: resoconto solo del forex col filtro",$$("#tReso .reso").length===1&&/FOREX/.test($("#tReso").textContent)&&!/XAUUSD/.test($("#tReso").textContent));
  await clk($('[data-tf="all"]'));await clk($('[data-tv="grid"]'));
  // ---- MODIFICA ed ELIMINA
  await clk($$(".tcard").find(c=>!c.querySelector(".res.o")));ok("trade chiuso: si apre la scheda modificabile",/Il trade/.test($("#sheetIn h2").textContent)&&!$("[data-fc]")&&!!$('[data-ff="why"]')&&$$("[data-fout]").length===4&&$('[data-fout="sl"]').classList.contains("on"),[$("#sheetIn h2").textContent,!!$("[data-fc]"),!!$('[data-ff="why"]'),$$("[data-fout]").length,$("#sheetIn main").textContent.slice(0,300)].join(" | "));

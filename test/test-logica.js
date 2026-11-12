@@ -142,4 +142,14 @@ ok("coppia: normalizza",L.normCoppia("eur/usd")==="EURUSD"&&L.normCoppia(" gbp j
  ok("coppia: elenco dalla più usata",L.coppie(NN,TT).join()==="EURUSD,GBPJPY");
  const [n2,t2]=L.filtraC(NN,TT,"GBPJPY");ok("coppia: filtro tiene la coppia e le note generali",t2.length===1&&n2.length===2&&L.filtraC(NN,TT,null)[1].length===3);
  ok("coppia: nel file per Sara",/TRADE EURUSD long/.test(L.esportaMd(NN,TT,"fx","2026-11-01","2026-11-30"))&&/GBPJPY · D/.test(L.esportaMd(NN,TT,"fx","2026-11-01","2026-11-30")));}
+// ---- resoconto in % (giorno, settimana da lunedì, mese)
+{const T=[t({d:"2026-11-12",res:1}),t({d:"2026-11-12",res:-0.5}),t({d:"2026-11-10",res:2}),t({d:"2026-11-09",res:0.4}),t({d:"2026-11-08",res:-1}),t({d:"2026-10-31",res:3}),t({d:"2026-11-13",res:5}),t({d:"2026-11-12",res:null,open:true}),t({s:"fx",d:"2026-11-12",res:9})];
+ const r=L.resoconto(T,"xau","2026-11-12");
+ ok("resoconto: giorno",r.giorno.n===2&&r.giorno.sum===0.5,r.giorno);
+ ok("resoconto: settimana da lunedì 9, esclusa domenica 8 e giorni dopo",r.settimana.n===4&&r.settimana.sum===2.9,r.settimana);
+ ok("resoconto: mese senza ottobre e senza giorni dopo",r.mese.n===5&&r.mese.sum===1.9,r.mese);
+ ok("resoconto: altro mercato separato",L.resoconto(T,"fx","2026-11-12").giorno.sum===9);
+ const v=L.resoconto(T,"xau","2026-11-09");ok("resoconto: lunedì apre la settimana",v.settimana.n===1&&v.settimana.sum===0.4,v);
+ const dom=L.resoconto(T,"xau","2026-11-08");ok("resoconto: domenica chiude la settimana di lunedì 2",dom.settimana.n===1&&dom.settimana.sum===-1,dom);
+ const e=L.resoconto([],"xau","2026-11-12");ok("resoconto: vuoto senza NaN",e.giorno.n===0&&e.giorno.sum===0&&e.mese.sum===0);}
 console.log((f?"FALLITI ":"TUTTI OK ")+(n-f)+"/"+n);process.exit(f?1:0);
