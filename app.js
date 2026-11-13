@@ -16,8 +16,10 @@ const CFG=window.JOURNAL_CONFIG||{};
 const sb=(window.supabase&&CFG.url&&CFG.anonKey)?window.supabase.createClient(CFG.url,CFG.anonKey):null;
 const TAB="journal_trade", TABN="journal_nota", BUCKET="screenshot";
 let N=[], T=[], USER=null, CONF=[], syncMsg="non collegato";
+// i link firmati scadono dopo un'ora: si riusano per 50 minuti, poi se ne chiede uno nuovo
 const urlCache={};
-async function urlFor(path){if(urlCache[path])return urlCache[path];const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(path,3600);if(error||!data)return"";urlCache[path]=data.signedUrl;return data.signedUrl}
+async function urlFor(path){const c=urlCache[path];if(c&&c.scade>Date.now())return c.u;const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(path,3600);if(error||!data)return"";urlCache[path]={u:data.signedUrl,scade:Date.now()+50*60000};return data.signedUrl}
+window.__urlFor=urlFor;
 async function loadAll(){const {data,error}=await sb.from(TAB).select("*").order("data").order("ora");if(error){syncMsg="errore di lettura: "+error.message;toast("Non riesco a leggere l'archivio.");return false}T=sortT(data.map(rowToT));CONF=allConf(T);
   const rn=await sb.from(TABN).select("*").order("data").order("ora");if(rn.error){N=[];syncMsg="trade letti, diario no: "+rn.error.message;toast("Il diario non si legge: manca la tabella journal_nota?");return true}
   N=rn.data.map(rowToN);syncMsg="collegato · "+T.length+" trade · "+N.length+" note";return true}
@@ -26,7 +28,10 @@ async function delN(n){const {error}=await sb.from(TABN).delete().eq("id",n.id);
 async function saveT(t){const row=tToRow(t);const q=row.id?sb.from(TAB).update(row).eq("id",row.id):sb.from(TAB).insert(row);const {data,error}=await q.select().single();if(error){toast("Non salvato: "+error.message);return null}const n=rowToT(data);const i=T.findIndex(x=>x.id===n.id);i>=0?T[i]=n:T.push(n);sortT(T);CONF=allConf(T);syncMsg="collegato · "+T.length+" trade";return n}
 async function delT(t){const {error}=await sb.from(TAB).delete().eq("id",t.id);if(error){toast("Non cancellato: "+error.message);return false}if(t.imgs.length)await sb.storage.from(BUCKET).remove(t.imgs);T=T.filter(x=>x.id!==t.id);CONF=allConf(T);return true}
 async function uploadImg(tradeId,blob,i){const ext=(blob.type==="image/jpeg")?"jpg":blob.type==="image/webp"?"webp":"png";const path=USER.id+"/"+tradeId+"/"+Date.now()+"-"+i+"."+ext;const {error}=await sb.storage.from(BUCKET).upload(path,blob,{contentType:blob.type||"image/png"});if(error){toast("Screenshot non caricato: "+error.message);return null}return path}
-function hydrateImgs(){document.querySelectorAll("img[data-path]").forEach(async img=>{const p=img.dataset.path;delete img.dataset.path;const u=await urlFor(p);if(u)img.src=u;else img.closest(".thumb,.im,.gal a,.shot")?.classList.add("none")})}
+function hydrateImgs(){document.querySelectorAll("img[data-path]").forEach(async img=>{const p=img.dataset.path;delete img.dataset.path;const none=()=>img.closest(".thumb,.im,.gal a,.shot")?.classList.add("none");
+  // se l'immagine non si apre (link scaduto) si chiede un link nuovo, una volta sola
+  img.onerror=async()=>{img.onerror=null;delete urlCache[p];const u2=await urlFor(p);if(u2)img.src=u2;else none()};
+  const u=await urlFor(p);if(u)img.src=u;else none()})}
 
 /* ===== GRAFICI ===== */
 function area(vals,h,grid){if(vals.length<2)return`<div class="empty" style="height:${h}px;display:grid;place-items:center">la curva parte dal secondo trade chiuso</div>`;const w=600,min=Math.min(0,...vals),max=Math.max(0,...vals),sp=max-min||1;const x=i=>i/(vals.length-1)*w,y=v=>h-6-(v-min)/sp*(h-14);const pts=vals.map((v,i)=>[x(i),y(v)]);let p="M"+pts[0][0]+" "+pts[0][1];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],cx=(a[0]+b[0])/2;p+=` C${cx} ${a[1]},${cx} ${b[1]},${b[0]} ${b[1]}`}const id="g"+Math.random().toString(36).slice(2,7);const z=y(0);const gl=grid?[0,.5,1].map(k=>`<line x1="0" x2="${w}" y1="${(6+k*(h-14)).toFixed(1)}" y2="${(6+k*(h-14)).toFixed(1)}" stroke="rgba(255,255,255,.07)"/>`).join(""):"";return`<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" style="height:${h}px"><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--acc)" stop-opacity=".4"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></linearGradient></defs>${gl}<line x1="0" x2="${w}" y1="${z}" y2="${z}" stroke="rgba(255,255,255,.2)" stroke-dasharray="3 5"/><path d="${p} L${w} ${h} L0 ${h}Z" fill="url(#${id})"/><path d="${p}" fill="none" stroke="var(--acc)" stroke-width="2.5"/></svg>`}

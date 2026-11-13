@@ -215,6 +215,10 @@ try{
  await clk($('#pop [data-pal="verde"]'));ok("impostazioni: verde toglie data-pal",!document.documentElement.hasAttribute("data-pal"));
  await clk($('#pop [data-pal="mono"]'));ok("impostazioni: mono rimesso",document.documentElement.getAttribute("data-pal")==="mono");
  await clk($("#logoutBtn"));await W(100);ok("esci: torna al login",!$("#login").hidden&&$("#app").hidden);
+ {const P="prova/scade.png",n0=window.__firme||0,DN=Date.now;
+  await window.__urlFor(P);await window.__urlFor(P);const una=(window.__firme||0)-n0===1;
+  Date.now=()=>DN()+51*60000;await window.__urlFor(P);Date.now=DN;
+  ok("immagini: il link si riusa, ma dopo 50 minuti se ne chiede uno nuovo (scade dopo un'ora)",una&&(window.__firme||0)-n0===2,"firme chieste: "+((window.__firme||0)-n0));}
  ok("niente scroll orizzontale",document.documentElement.scrollWidth<=window.innerWidth+1,document.documentElement.scrollWidth+">"+window.innerWidth);
  ok("niente errori JS",errs.length===0,errs.join(" | "));
 }catch(e){R.push("FAIL eccezione :: "+e.message+" "+(e.stack||"").split("\n")[1])}

@@ -22,7 +22,7 @@ const sb={
     signInWithPassword:async({email,password})=>{if(password==="giusta"){session={user:{id:"uid-1",email}};listeners.forEach(f=>f("SIGNED_IN",session));return{data:{session},error:null}}return{data:{},error:{message:"Invalid login credentials"}}},
     signOut:async()=>{session=null;listeners.forEach(f=>f("SIGNED_OUT",null));return{error:null}}},
   from:(tab)=>query(tab),
-  storage:{from:()=>({upload:async(path,blob)=>{if(window.__FAILUP)return{data:null,error:{message:"upload finto fallito"}};window.__files.push(path);return{data:{path},error:null}},createSignedUrl:async(path)=>({data:{signedUrl:"data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA="},error:null}),createSignedUrls:async(paths,sec)=>(window.__scadLink=sec,{data:paths.map(p=>({path:p,signedUrl:"https://firmato/"+p})),error:null}),remove:async(paths)=>{window.__W.push(["remove",paths]);return{data:null,error:null}}})}
+  storage:{from:()=>({upload:async(path,blob)=>{if(window.__FAILUP)return{data:null,error:{message:"upload finto fallito"}};window.__files.push(path);return{data:{path},error:null}},createSignedUrl:async(path)=>(window.__firme=(window.__firme||0)+1,{data:{signedUrl:"data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA="},error:null}),createSignedUrls:async(paths,sec)=>(window.__scadLink=sec,{data:paths.map(p=>({path:p,signedUrl:"https://firmato/"+p})),error:null}),remove:async(paths)=>{window.__W.push(["remove",paths]);return{data:null,error:null}}})}
 };
 window.supabase={createClient:()=>sb};
 window.JOURNAL_CONFIG={url:"https://finto.local",anonKey:"finta"};
