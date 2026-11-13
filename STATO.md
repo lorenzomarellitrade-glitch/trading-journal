@@ -1,6 +1,6 @@
 # Stato · trading-journal
 
-_Aggiornato: 2026-11-12_
+_Aggiornato: 2026-11-13_
 
 **Fatto:** journal nuovo al posto dell'app React, nello stesso repo e allo stesso indirizzo. Supabase riattivato (era in pausa), tabella `journal_trade` e bucket `screenshot` creati. Test: 30 di logica + 129 di interfaccia, tutti verdi. Palette mono, verde alternativa.
 **Manca:** prova vera di Lore con login, un trade con screenshot incollato e un link TradingView.
@@ -25,3 +25,5 @@ _Aggiornato: 2026-11-12_
 **2026-11-12 (Lore), totale XAUUSD + FOREX:** sotto il resoconto della Sessione e in Trade su "Tutti" (solo con trade su tutti e due), somma semplice delle % dei due conti. Test: 106 di logica, 372 verifiche, verdi. **Pubblicato** il 2026-11-12, controllato online.
 
 **2026-11-12 (Lore), striscia della settimana:** il resoconto a numeri è sostituito dalla variante 2 scelta da Lore (`1-mercati/trading/journal-app/anteprima-resoconto-2.html`): una barra per giorno da lunedì, oro (crema) e forex (ambra) impilati, perdite in rosso sotto la linea; in alto totale della settimana, oggi e mese. Sessione: settimana del giorno scelto, oro + forex. Trade: questa settimana, filtrata per mercato. Funzione `giorniSettimana` in logica.js. Test verdi: 110 di logica. **Pubblicato** il 2026-11-12, controllato online.
+
+**2026-11-13 (Lore), link alle immagini che non scadono:** in "Scarica per Sara" i link firmati durano 10 anni invece di 7 giorni (Lore: "i link delle immagini non devono sparire"). Test nuovo sulla durata, 110 di logica e 369 verifiche di interfaccia, verdi. **Pubblicato** il 2026-11-13 su OK di Lore, controllato online. Chi ha il file vede gli screenshot per 10 anni: il file si passa solo a Sara. I resoconti scaricati prima di oggi hanno ancora link da 7 giorni.

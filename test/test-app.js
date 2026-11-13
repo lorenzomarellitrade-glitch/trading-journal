@@ -204,6 +204,7 @@ try{
  ok("statistiche: niente confluenze né stato prima",!/Le confluenze|Come ero prima/.test(v));}
  if(N){ok("statistiche: time frame a favore del bias (daily)",$$(".hbars")[0].textContent.includes("D"));ok("statistiche: sicurezza a fine sessione",/4\/5/.test($("#view").textContent));ok("statistiche: quando fai il tuo con i trade da piano vinti",$$(".tcard").length>=1)}
  await clk($("[data-exp]"));await W(100);ok("esporta: file per Sara con note e trade",/# Diario XAUUSD/.test(window.__ultimoExport||"")&&/Scritta il giorno dopo/.test(window.__ultimoExport)&&/TRADE short/.test(window.__ultimoExport)||/TRADE/.test(window.__ultimoExport),(window.__ultimoExport||"").slice(0,200));
+ ok("esporta: i link alle immagini durano almeno 10 anni",window.__scadLink>=3650*86400,"durata chiesta: "+window.__scadLink+" s");
  await clk($('[data-st="fx"]'));
  ok("coppia: statistiche forex con le coppie",/Le tue coppie/.test($("#view").textContent)&&!!$('[data-stc="GBPUSD"]'),$("#view").textContent.slice(0,200));
  await clk($('[data-stc="GBPUSD"]'));ok("coppia: filtro sulla coppia",$('[data-stc="GBPUSD"]').classList.contains("on")&&/GBPUSD · \d+ trade chiusi/.test($("#view").textContent)&&!/Le tue coppie/.test($("#view").textContent));

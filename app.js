@@ -216,7 +216,7 @@ function vStatsDi(N,T,cS,cL,ct){
     <section class="blk"><div class="lab"><span>Il risultato · % sul conto</span><span>${pct(s.sum)} in totale</span></div>${area(cv,140,true)}<div class="axis"><span>${L[0]?fmtD(L[0].d):""}</span><span>${L.length?fmtD(L[L.length-1].d):""}</span></div></section>
     <div class="col">
      <section class="blk"><div class="kpis"><div class="kpi"><b>${s.n?s.wr.toFixed(0)+" %":"—"}</b><span>win rate</span></div><div class="kpi"><b>${s.n?fR(s.avgR):"—"}</b><span>R medio</span></div><div class="kpi"><b>${!s.n?"—":s.pf===Infinity?"∞":s.pf.toFixed(2).replace(".",",")}</b><span>profit factor</span></div></div></section>
-     <section class="blk"><div class="lab"><span>Resoconto con Sara</span></div><div class="note" style="margin:0 0 10px">Scarica gli ultimi 30 giorni (note, trade, link alle immagini validi 7 giorni) e passa il file a Sara: lo legge con il coach di trading e ti dice che pattern vede nelle tue parole.</div><button type="button" class="cta ghost sm" data-exp>Scarica per Sara · ${STRAT[stS].n}</button></section>
+     <section class="blk"><div class="lab"><span>Resoconto con Sara</span></div><div class="note" style="margin:0 0 10px">Scarica gli ultimi 30 giorni (note, trade, link alle immagini che non scadono) e passa il file a Sara: lo legge con il coach di trading e ti dice che pattern vede nelle tue parole.</div><button type="button" class="cta ghost sm" data-exp>Scarica per Sara · ${STRAT[stS].n}</button></section>
     </div>
    </div>
   </div>`;
@@ -296,7 +296,7 @@ async function commitSheet(){
 const VIEWS={sessione:vSess,calendario:vCal,trade:vTrades,statistiche:vStats};
 function route(){if(!USER)return;header();const v=(location.hash||"#sessione").slice(1);if(v==="nuovo"&&!F)openNew(TK);const fn=VIEWS[v]||vSess;$("view").innerHTML=fn();document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.v===(VIEWS[v]?v:"sessione")));window.scrollTo(0,0);tickClock();hydrateImgs()}
 async function esporta(){const da=spostaGiorno(TK,-30);const paths=[...N,...T].filter(x=>x.s===stS&&x.d>=da).flatMap(x=>x.imgs||[]);const url={};
-  if(paths.length){const {data,error}=await sb.storage.from(BUCKET).createSignedUrls(paths,7*86400);if(error||!data){toast("Non riesco a preparare i link alle immagini: riprova tra poco.");return}(data||[]).forEach(r=>{if(r&&r.signedUrl)url[r.path]=r.signedUrl});}const mancano=paths.filter(p=>!url[p]).length;
+  if(paths.length){const {data,error}=await sb.storage.from(BUCKET).createSignedUrls(paths,3650*86400);if(error||!data){toast("Non riesco a preparare i link alle immagini: riprova tra poco.");return}(data||[]).forEach(r=>{if(r&&r.signedUrl)url[r.path]=r.signedUrl});}const mancano=paths.filter(p=>!url[p]).length;
   const md=esportaMd(N,T,stS,da,TK,url);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([md],{type:"text/markdown"}));a.download="diario-"+(stS==="xau"?"xauusd":"forex")+"-"+TK+".md";document.body.appendChild(a);a.click();a.remove();window.__ultimoExport=md;toast(mancano?"Scaricato, ma "+mancano+" immagini sono senza link.":"Scaricato: passalo a Sara.")}
 let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3000)}
 function setPal(p){p==="verde"?document.documentElement.removeAttribute("data-pal"):document.documentElement.setAttribute("data-pal","mono");try{localStorage.setItem("journal-pal",p)}catch(e){}document.querySelectorAll("#pop [data-pal]").forEach(b=>b.classList.toggle("on",b.dataset.pal===p))}
