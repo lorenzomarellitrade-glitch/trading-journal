@@ -62,6 +62,10 @@ ok("esito2: TP1 + TP = +4 %, +2 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"tp"})
 ok("esito2: TP1 + pareggio = +1 %, +0,5 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"be"}),3);return e.res===1&&e.r===0.5})());
 ok("esito2: due stop = -2 %, -1 R",(()=>{const e=L.esito2(2,P({o1:"sl",o2:"sl"}),3);return e.res===-2&&e.r===-1})());
 ok("esito2: TP1 + altro +1,5 % = +2,5 %, +1,25 R",(()=>{const e=L.esito2(2,P({o1:"tp",o2:"altro",res2:1.5}),3);return e.res===2.5&&e.r===1.25})());
+ok("esito2: pos. 1 chiusa a mano -0,3 % + SL = -1,3 %, -0,65 R",(()=>{const e=L.esito2(2,P({o1:"altro",res1:-0.3,o2:"sl"}),3);return e.res===-1.3&&e.r===-0.65})());
+ok("esito2: due chiusure a mano -0,3 e -0,2 = -0,5 %, -0,25 R",(()=>{const e=L.esito2(2,P({o1:"altro",res1:-0.3,o2:"altro",res2:-0.2}),3);return e.res===-0.5&&e.r===-0.25})());
+ok("esito2: pos. 1 a mano senza % = null",L.esito2(2,P({o1:"altro",o2:"sl"}),3)===null);
+ok("posizioni: pos. 1 a mano, riga <-> trade",(()=>{const r=L.tToRow(t({risk:2,rr:3,pos:P({o1:"altro",res1:-0.3,o2:"sl"})}));const b=L.rowToT({...row,posizioni:r.posizioni});const r0=L.tToRow(t({risk:2,rr:3,pos:P({o1:"tp",res1:-0.3,o2:"sl"})}));return r.posizioni.esito1==="altro"&&r.posizioni.esito1_pct===-0.3&&b.pos.o1==="altro"&&b.pos.res1===-0.3&&r0.posizioni.esito1_pct===null})());
 ok("esito2: manca una posizione = null",L.esito2(2,P({o1:"tp"}),3)===null&&L.esito2(2,P({o1:"tp",o2:"altro"}),3)===null);
 ok("esito2: TP senza RR = null",L.esito2(2,P({o1:"tp",o2:"tp"}),null)===null);
 ok("posizioni: riga <-> trade",(()=>{const r=L.tToRow(t({risk:2,rr:3,pos:P({o1:"tp",o2:"altro",res2:1.5})}));const b=L.rowToT({...row,posizioni:r.posizioni});return r.posizioni.rischio1===1&&r.posizioni.esito2==="altro"&&r.posizioni.esito2_pct===1.5&&b.pos.r1===1&&b.pos.rr1===1&&b.pos.o1==="tp"&&b.pos.res2===1.5})());

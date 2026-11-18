@@ -41,10 +41,10 @@ function tipoEsito(res,risk,rr){if(!num(res))return null;if(+res===0)return"be";
 
 /* Due posizioni (Lore, 2026-11-09): rischio diviso (di base a metà), pos. 1 a TP1 (di base 1:1), pos. 2 al TP finale (rr del trade) */
 const nz=v=>num(v)?+v:null;
-function posDaRiga(p){if(!p)return null;return{r1:nz(p.rischio1),rr1:nz(p.rr1),o1:p.esito1||null,o2:p.esito2||null,res2:nz(p.esito2_pct)}}
-function posInRiga(p){if(!p)return null;return{rischio1:nz(p.r1),rr1:nz(p.rr1),esito1:p.o1||null,esito2:p.o2||null,esito2_pct:p.o2==="altro"?nz(p.res2):null}}
+function posDaRiga(p){if(!p)return null;return{r1:nz(p.rischio1),rr1:nz(p.rr1),o1:p.esito1||null,o2:p.esito2||null,res1:nz(p.esito1_pct),res2:nz(p.esito2_pct)}}
+function posInRiga(p){if(!p)return null;return{rischio1:nz(p.r1),rr1:nz(p.rr1),esito1:p.o1||null,esito2:p.o2||null,esito1_pct:p.o1==="altro"?nz(p.res1):null,esito2_pct:p.o2==="altro"?nz(p.res2):null}}
 function livelli2(risk,p,rr){const r1=nz(p.r1),rt=nz(risk),q2=rt!=null&&r1!=null?r2(rt-r1):null;const a=livelli(r1,nz(p.rr1)),b=livelli(q2,nz(rr));return{r1,r2:q2,sl1:a.sl,tp1:a.tp,sl2:b.sl,tp2:b.tp,sl:rt!=null?-r2(rt):null}}
-function esito2(risk,p,rr){const v=livelli2(risk,p,rr);const e1=esitoDa(p.o1,v.r1,nz(p.rr1));let e2=null;if(p.o2==="altro"){if(num(p.res2))e2={res:+p.res2}}else e2=esitoDa(p.o2,v.r2,nz(rr));if(!e1||!e2)return null;const res=r2(e1.res+e2.res);return{res,r:rDaEsito(res,risk)}}
+function esito2(risk,p,rr){const v=livelli2(risk,p,rr);const e1=p.o1==="altro"?(num(p.res1)?{res:+p.res1}:null):esitoDa(p.o1,v.r1,nz(p.rr1));let e2=null;if(p.o2==="altro"){if(num(p.res2))e2={res:+p.res2}}else e2=esitoDa(p.o2,v.r2,nz(rr));if(!e1||!e2)return null;const res=r2(e1.res+e2.res);return{res,r:rDaEsito(res,risk)}}
 
 /* Immagine di TradingView da un link "condividi" (tradingview.com/x/ID/) */
 function tvImg(link){const m=/tradingview\.com\/x\/([A-Za-z0-9]+)/.exec(link||"");if(!m)return"";const id=m[1];return"https://s3.tradingview.com/snapshots/"+id[0].toLowerCase()+"/"+id+".png"}

@@ -180,7 +180,10 @@ try{
  const ins2=window.__W.filter(w=>w[0]==="insert").slice(-1)[0][1];
  ok("due posizioni: riga salvata",ins2.strategia==="fx"&&ins2.coppia==="GBPUSD"&&ins2.rischio===2&&ins2.rr===3&&ins2.posizioni&&ins2.posizioni.rischio1===1&&ins2.posizioni.rr1===1&&ins2.posizioni.esito1===null,JSON.stringify(ins2));
  await go("#sessione");await clk($('[data-sm="fx"]'));ok("due posizioni: nel flusso forex",/2 posizioni · 1:1 \/ 1:3/.test($("#feed").textContent));
- await clk($("[data-close]"));ok("due posizioni: chiusura con due file di pulsanti",$$("[data-po1]").length===3&&$$("[data-po2]").length===4);
+ await clk($("[data-close]"));ok("due posizioni: chiusura con due file di pulsanti",$$("[data-po1]").length===4&&$$("[data-po2]").length===4);
+ await clk($('[data-po1="altro"]'));await clk($('[data-po2="sl"]'));ok("due posizioni: pos. 1 a mano senza % non dà esito",!!$('[data-ff="p1res"]')&&/esitototale—/.test($("#sheetIn").textContent.replace(/\s+/g,"")));
+ $('[data-ff="p1res"]').focus();await typ('[data-ff="p1res"]',"-0.3");ok("due posizioni: pos. 1 a mano -0,3 + SL = -1,30 %, -0,65 R",/[-−]1,30 % · -0,65 R/.test($("#sheetIn").textContent)&&document.activeElement===$('[data-ff="p1res"]'));
+ await clk($('[data-po2="altro"]'));ok("due posizioni: tolgo lo SL della pos. 2",true);
  await clk($('[data-po1="tp"]'));await clk($("#saveSheet"));ok("due posizioni: con una sola posizione scelta non chiude",!$("#sheet").hidden&&/Manca l'esito/.test($("#toast").textContent));
  await clk($('[data-po2="be"]'));ok("due posizioni: TP1 + pareggio = +1 %, +0,5 R",/\+1,00 % · \+0,5 R/.test($("#sheetIn").textContent));
  await clk($('[data-po2="altro"]'));$('[data-ff="p2res"]').focus();await typ('[data-ff="p2res"]',"1.5");ok("due posizioni: TP1 + altro 1,5 = +2,5 %, +1,25 R",/\+2,50 % · \+1,25 R/.test($("#sheetIn").textContent)&&document.activeElement===$('[data-ff="p2res"]'));
