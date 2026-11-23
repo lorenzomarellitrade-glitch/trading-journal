@@ -75,6 +75,15 @@ try{
   const c2=$$(".ncard").find(c=>/Scritta il giorno dopo/.test(c.textContent));await clk(c2.querySelector("[data-nedit]"));await typ("[data-cdata]",ieri);await clk($("#cInvia"));await W(200);
   ok("sposta nota: rimessa a ieri",window.__W.filter(x=>x[0]==="updateN").slice(-1)[0][1].data===ieri);await clk($('[data-dg="-1"]'));}
  await clk($('[data-dg="0"]'));ok("torna a oggi",$("#sesDate").value===kOggi);
+ // giorno nuovo con la pagina rimasta aperta (Lore, 2026-11-23): "oggi" si ricalcola da solo
+ {const D0=window.Date;class D1 extends D0{constructor(...x){if(x.length)super(...x);else super(D0.now()+86400000)}}
+  const dm=new D0(D0.now()+86400000),kDom=dm.getFullYear()+"-"+String(dm.getMonth()+1).padStart(2,"0")+"-"+String(dm.getDate()).padStart(2,"0");
+  window.Date=D1;await W(1300);
+  ok("giorno nuovo a pagina aperta: la sessione passa al giorno nuovo",$("#sesDate").value===kDom,$("#sesDate").value);
+  ok("giorno nuovo: niente tasto per tornare a oggi",!$('[data-dg="0"]'));
+  ok("giorno nuovo: data in testata aggiornata",$("#hdDate").textContent.includes(String(dm.getDate()).padStart(2,"0")+"."+String(dm.getMonth()+1).padStart(2,"0")),$("#hdDate").textContent);
+  window.Date=D0;await W(1300);
+  ok("giorno nuovo: con l'orologio vero torna al giorno vero",$("#sesDate").value===kOggi,$("#sesDate").value);}
  // forex
  await clk($('[data-sm="fx"]'));
  ok("forex: da W a H1, niente finestre",$$("[data-ctf]").map(b=>b.dataset.ctf).join()==="W,D,H4,H1"&&!$("[data-w]")&&/il setup decide/.test($("#view").textContent));

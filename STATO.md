@@ -1,6 +1,6 @@
 # Stato · trading-journal
 
-_Aggiornato: 2026-11-13_
+_Aggiornato: 2026-11-23_
 
 **Fatto:** journal nuovo al posto dell'app React, nello stesso repo e allo stesso indirizzo. Supabase riattivato (era in pausa), tabella `journal_trade` e bucket `screenshot` creati. Test: 30 di logica + 129 di interfaccia, tutti verdi. Palette mono, verde alternativa.
 **Manca:** prova vera di Lore con login, un trade con screenshot incollato e un link TradingView.
@@ -31,3 +31,5 @@ _Aggiornato: 2026-11-13_
 **2026-11-13 (Lore), immagini che sparivano a schermo:** i link firmati per mostrare le immagini valgono un'ora ma restavano in memoria per sempre: con il journal aperto più di un'ora alcune immagini diventavano vuote. Ora si rinnovano dopo 50 minuti e, se un'immagine non si apre, si chiede subito un link nuovo. Le immagini nell'archivio non erano perse. Test nuovo, 110 di logica e 372 verifiche, verdi. **Pubblicato** il 2026-11-13 su OK di Lore, controllato online.
 
 **2026-11-18 (Lore), chiusa a mano sulla posizione 1:** nell'esito a due posizioni la pos. 1 aveva solo TP1, SL e pareggio. Aggiunto il tasto "chiusa a mano" con la % (anche negativa), come sulla pos. 2; il tasto "altro" ora si chiama "chiusa a mano" ovunque. La % sta in `posizioni.esito1_pct` (jsonb, nessun SQL da eseguire). Test verdi: 114 di logica, 381 verifiche di interfaccia. **Pubblicato** il 2026-11-18 su OK di Lore, controllato online.
+
+**2026-11-23 (Lore), giorno sballato:** con la pagina rimasta aperta dal giorno prima il journal restava sul giorno vecchio ("non sei su oggi", testata al 22). Causa: "oggi" fissato all'apertura. Ora si ricalcola ogni secondo e al ritorno sulla scheda; chi era su oggi passa al giorno nuovo, salvo una nota a metà. Test nuovi (4), 114 di logica e interfaccia verdi. **Non ancora pubblicato:** serve l'OK di Lore per il deploy.

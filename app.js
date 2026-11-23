@@ -2,7 +2,7 @@
 (function(){
 const {giorniSettimana,resoconto,normCoppia,coppie,coppiaTable,filtraC,pad,dk,esc,pct,fmtD,STRAT,STATI,SK,SESSOPT,sessFor,mm,sessState,rowToT,tToRow,sortT,tvImg,allConf,closedOf,stats,confTable,checkTable,statoTable,curve,serieP,weekOf,parseRR,fmtRR,livelli,esitoDa,rDaEsito,tipoEsito,livelli2,esito2,TFS,BIAS,rowToN,nToRow,flusso,lettura,allineamento,sicTable,esportaMd,parseOra,pianoTable,accordo,pazienza,finestre,costanza,PAROLE,parole,prove,conChecklist}=window.JL;
 const GG=["dom","lun","mar","mer","gio","ven","sab"], MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
-const today=new Date(); const TK=dk(today);
+let today=new Date(),TK=dk(today);
 const num=v=>v!=null&&v!==""&&isFinite(v);
 const meta=v=>num(v)?Math.round(v/2*100)/100:null;
 const nuovaPos=risk=>({r1:meta(risk),rr1:1,rr1Txt:"1:1",r1Man:false,o1:null,o2:null,res1:null,res2:null});
@@ -165,11 +165,14 @@ function vCal(){
 }
 
 /* ===== ORA E SESSIONI (ora italiana) ===== */
-function tickClock(){const el=$("clk");if(!el)return;const d=new Date();el.textContent=pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+/* giorno nuovo con la pagina rimasta aperta (Lore, 2026-11-23): "oggi" si ricalcola; chi era su oggi passa al giorno nuovo, salvo una nota a metà */
+function nuovoGiorno(){const d=new Date(),k=dk(d);today=d;if(k===TK)return false;const v=TK;TK=k;
+  const bozza=C.edit||C.txt||C.pending.length||C.busy;if(sesD===v&&!bozza)sesD=k;if(calSel===v)calSel=k;return true}
+function tickClock(){if(nuovoGiorno()&&USER)route();const el=$("clk");if(!el)return;const d=new Date();el.textContent=pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
   const h=d.getHours()+d.getMinutes()/60;const st=sessState(h);const open=st.filter(x=>x.on&&!x.n.startsWith("La mia")).map(x=>x.n);const mine=st.filter(x=>x.on&&x.n.startsWith("La mia")).map(x=>x.n);
   $("clkSess").textContent=GG[d.getDay()]+" "+pad(d.getDate())+"."+pad(d.getMonth()+1)+" · "+(open.length?"aperte: "+open.join(" + "):"mercato quasi fermo");
   document.querySelectorAll("[data-w]").forEach(w=>w.classList.toggle("on",mine.includes(w.dataset.w)))}
-setInterval(tickClock,1000);
+setInterval(tickClock,1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)tickClock()});
 
 /* ===== LISTA TRADE ===== */
 let tView="grid",tFilt="all";
